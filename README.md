@@ -4,7 +4,7 @@
 - Performed Analysis on Sensor data which aided in finding bugs.
 - The bug meant that the sensor was sometimes incorrectly detecting posture or unable to detect any posture at all in infants 
 
-  **Updates**
+**Updates**
 - Modified the code to assign the Overall Class correctly.
 - Researched on vectorizing operations and identifying bottlenecks to optimize code for large files
 - Optimized code.
