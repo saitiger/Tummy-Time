@@ -5,5 +5,14 @@
 - The bug meant that the sensor was sometimes incorrectly detecting posture or unable to detect any posture at all in infants 
 - Updated the code to correctly assign the Overall Class.
 
+  Updates
+- Researched on vectorizing operations and identifying bottlenecks to optimize code for large files
+- Optimized code.
+- Encountered incorrect encoding,mixed datatypes and kernel dying issues.
+- Handled the bugs. Started preprocessing the videos for posture detection
+- Added a jupter notebook file that can be run locally on lab computers where running the web app is not possible
+- Added input functions for easy navigation in the jupyter notebook
+- Refactored functions. Tested code for files with 10M+ rows.
+
 **Future Work:**
 - Working on a deep learning model to correctly detect the posture of infants, thereby reducing manual work and labeling the dataset using Datavyu.
