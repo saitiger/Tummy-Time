@@ -36,4 +36,4 @@ for segment in cnt_arr:
     st.write(segment)
 
 if st.button("Back to Main Page"):
-    st.switch_page("pages/main.py")
+    st.switch_page("main.py")
