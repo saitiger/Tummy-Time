@@ -1,87 +1,102 @@
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 import numpy as np
 import streamlit as st
+import csv
+from functools import partial
+import plotly.graph_objects as go
+import plotly.express as px
+import io
 
-def clean_dataset(file):
-    """
-    This is for csv files where the file has been processed using formulas
-    file : Is the name of the csv that has the data from the sensor
-    Example : A1_right hip_102373_2024-07-31 10-52-18 
-    NOTE: There is no need to add .csv in front of the filename 
-    """
-    df = pd.read_csv(file,skiprows = 99)
-    df.drop(df.columns[[5,7,8,9,10,11,12,15]], axis=1, inplace = True)    
-    df.rename(columns={'Unnamed: 0': 'Timing', 'Overall class ': 'Overall class','360 angle ':'360 angle','Supine-recline class ':'Supine-recline class'}, inplace=True)
-    df['Timing'] = pd.to_datetime(df['Timing'], format='%Y-%m-%d %H:%M:%S:%f')
-    df['Milliseconds'] = df['Timing'].dt.microsecond // 1000
-    df['Time Diff'] = df['Milliseconds'].diff().fillna(10.0)
-    df.loc[df['Time Diff'] < 0, 'Time Diff'] = 10.0
-    
-    return df
+csv.field_size_limit(int(1e9)) 
 
+@st.cache_data
 def process_dataset(file):
     """
-    file : Is the name of the csv that has the data from the sensor
-    Example : A1_right hip_102373_2024-07-31 10-52-18 
-    NOTE: There is no need to add .csv in front of the filename 
+    Process a large dataset from a CSV file.
+
+    :param file: Streamlit UploadedFile object
+    :return: Processed DataFrame
     """
-    # df = pd.read_csv(file + '.csv', skiprows=99)
-    df = pd.read_csv(file,skiprows = 99,names = ['A','B','C','D','E','F','G','H','I','J','K','L','M','360 angle','Up/down angle','Observed position','Body Rotation','Prone-sit class','Supine-recline class','Overall class'])  
+    try:
+        # Attempt to read the file directly with pandas
+        df = pd.read_csv(file, encoding='utf-8', skiprows=99, on_bad_lines='skip', header=None)
+    except UnicodeDecodeError:
+        try:
+            # If UTF-8 fails, try 'latin-1'
+            df = pd.read_csv(file, encoding='latin-1', skiprows=99, on_bad_lines='skip', header=None)
+        except UnicodeDecodeError:
+            return "Error: Unable to decode the file. Please ensure it's a valid CSV."
 
-    S5 = 0
+    df = df.iloc[:, :4]
+    df.columns = ['A', 'B', 'C', 'D']
 
-    df['360 angle'] = np.sign(df['B']) * np.arccos(-df['D'] / np.sqrt(df['B']**2 + df['D']**2)) * 180 / np.pi + 180
+    df['360 angle'] = np.nan
+    df['Up/down angle'] = np.nan
+    df['Body Rotation'] = ""
+    df['Prone-sit class'] = ""
+    df['Supine-recline class'] = ""
+    df['Overall class'] = ""
 
-    df['Up/down angle'] = np.arcsin(df['C'] / np.sqrt(df['B']**2 + df['C']**2 + df['D']**2)) * 180 / 3.14
+    S5 = 140
 
-    df['Body Rotation'] = np.where((S5 < df['360 angle']) & (df['360 angle'] < (S5 + 180)), "supine-recline", "prone-sit")
+    df['360 angle'] = np.where(
+        (df['B']**2 + df['D']**2) != 0,
+        np.sign(df['B']) * np.degrees(np.arccos(-df['D'] / np.sqrt(df['B']**2 + df['D']**2))) + 180,
+        np.nan
+    )
 
-    df['Prone-sit class'] = np.select([
-    (df['Body Rotation'] == "prone-sit") & (df['Up/down angle'] > 0),
-    (df['Body Rotation'] == "prone-sit") & (df['Up/down angle'] > -23),
-    (df['Body Rotation'] == "prone-sit") & (df['Up/down angle'] > -63),
-    df['Body Rotation'] == "prone-sit"
-    ], [
-    "prone",
-    "prone supported",
-    "upright",
-    "sitting"
-    ], default="")
+    df['Up/down angle'] = np.where(
+        (df['B']**2 + df['C']**2 + df['D']**2) != 0,
+        np.degrees(np.arcsin(df['C'] / np.sqrt(df['B']**2 + df['C']**2 + df['D']**2))),
+        np.nan
+    )
 
-    df['Supine-recline class'] = np.select([
-    (df['Body Rotation'] == "supine-recline") & (df['Up/down angle'] > 15),
-    (df['Body Rotation'] == "supine-recline") & (df['Up/down angle'] < -36),
-    (df['Body Rotation'] == "supine-recline") & (df['360 angle'] < (S5 + 69)),
-    (df['Body Rotation'] == "supine-recline") & (df['360 angle'] > (S5 + 101)),
-    df['Body Rotation'] == "supine-recline"
-    ], [
-    "upsidedown",
-    "reclined",
-    "left side",
-    "right side",
-    "supine"
-    ], default="")
+    df['Body Rotation'] = np.where(
+        (df['360 angle'] > S5) & (df['360 angle'] < (S5 + 180)),
+        'supine-recline',
+        'prone-sit'
+    )
 
-    df['Overall class'] = df['Prone-sit class'] + df['Supine-recline class']
+    prone_sit_conditions = [
+        df['Up/down angle'] > 0,
+        df['Up/down angle'] > -23,
+        df['Up/down angle'] > -63
+    ]
+    prone_sit_choices = ['prone', 'prone supported', 'upright']
 
-    # Save the result
-    # df.to_csv('df_processed.csv', index=False)
-    # print("Processing complete. Results saved to 'df_processed.csv'")  
+    df['Prone-sit class'] = np.select(
+        prone_sit_conditions, 
+        prone_sit_choices, 
+        default='sitting'
+    )
 
-    df.drop(columns = ['H','I','J','K','L','M'],inplace = True)
-    df.rename(columns = {'A':'Timing'},inplace = True)
-    df['Timing'] = pd.to_datetime(df['Timing'], format='%Y-%m-%d %H:%M:%S:%f')
-    df['Milliseconds'] = df['Timing'].dt.microsecond // 1000
-    df['Time Diff'] = df['Milliseconds'].diff().fillna(10.0)
-    df.loc[df['Time Diff'] < 0, 'Time Diff'] = 10.0
-    
+    df.loc[df['Body Rotation'] != 'prone-sit', 'Prone-sit class'] = ""
+
+    supine_recline_conditions = [
+        df['Up/down angle'] > 15,
+        df['Up/down angle'] < -36,
+        df['360 angle'] < (S5 + 69),
+        df['360 angle'] > (S5 + 101)
+    ]
+    supine_recline_choices = ['upsidedown', 'reclined', 'left side', 'right side']
+
+    df['Supine-recline class'] = np.select(
+        supine_recline_conditions, 
+        supine_recline_choices, 
+        default='supine'
+    )
+
+    df.loc[df['Body Rotation'] != 'supine-recline', 'Supine-recline class'] = ""
+
+    df['Overall class'] = (df['Prone-sit class'] + ' ' + df['Supine-recline class']).str.strip()
+
+    df = df.dropna(subset=['A', 'B', 'C', 'D'])
+
     return df
 
 def display_dataset(df):
-    return df.iloc[:,:-2]
-    # return df[['Timing','360 angle','Up/down angle','Body Rotation','Prone-sit class','Supine-recline class','Overall class']]
+    # return df.iloc[:, :-2]
+    return df.head()
 
 def dataset_description(df):
     """
@@ -91,30 +106,36 @@ def dataset_description(df):
     class_counts['Duration in seconds'] = class_counts['Class Count'] / 100
     class_counts = class_counts[['Overall class', 'Duration in seconds']]
     
-    total_duration = class_counts['Duration in seconds'].sum()
-    # print(f"Duration of Video: {total_duration}")
+    total_duration_seconds = class_counts['Duration in seconds'].sum()
+
+    if total_duration_seconds >= 60:
+        total_duration_minutes = total_duration_seconds / 60
+        duration_str = f"Duration of Video: {total_duration_minutes:.2f} minutes"
+    else:
+        duration_str = f"Duration of Video: {total_duration_seconds:.2f} seconds"
     
-    # statistics = df.describe()
-    return class_counts, total_duration
+    return class_counts, total_duration_seconds, duration_str
 
 def create_plot(df):
     class_counts = df['Overall class'].fillna('NaN').groupby(df['Overall class'].fillna('Missing Rows')).count().reset_index(name='Class Count')
     class_counts['Duration in seconds'] = class_counts['Class Count'] / 100
     
-    fig, ax = plt.subplots(figsize=(8, 6))  # Create figure and axes objects
-    bars = ax.bar(class_counts['Overall class'], class_counts['Duration in seconds'])
+    fig = px.bar(class_counts, x='Overall class', y='Duration in seconds',
+                 labels={'Overall class': 'Category', 'Duration in seconds': 'Duration in Seconds'},
+                 title='Duration of Each Class')
     
-    for bar in bars:
-        yval = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width()/2, yval + 1, round(yval, 2), ha='center', va='bottom')
+    fig.update_layout(xaxis_tickangle=-45, yaxis_title='Duration in Seconds')
     
-    ax.set_xticklabels(class_counts['Overall class'], rotation=45)
-    ax.set_yticks([])
-    ax.set_xlabel('Category')
-    ax.set_ylabel('Duration in Seconds')
-    sns.despine(ax=ax, bottom=True, left=True)
+    for i in range(len(fig.data[0].x)):
+        fig.add_annotation(
+            x=fig.data[0].x[i],
+            y=fig.data[0].y[i],
+            text=f"{fig.data[0].y[i]:.2f}",
+            showarrow=False,
+            yshift=10
+        )
     
-    st.pyplot(fig)  # Provide the figure to st.pyplot
+    return fig
 
 def plot_bins(df, class_name):
     same_class_mask = df['Overall class'] == df['Overall class'].shift(1)
@@ -124,10 +145,8 @@ def plot_bins(df, class_name):
     
     d = df[df['Overall class'] == class_name].copy()
     
-    # If there are no rows for the given class
     if d.empty:
-        st.warning(f"No values for class '{class_name}' exist.")
-        return
+        return f"No values for class '{class_name}' exist."
     
     max_val = d['Rolling Sum'].max()
     
@@ -141,28 +160,27 @@ def plot_bins(df, class_name):
     
     # Check if all bin counts are zero
     if cnt_bin['bin_count'].sum() == 0:
-        st.warning(f"No values for class '{class_name}' exist.")
-        return
+        return f"No values for class '{class_name}' exist."
     
     cnt_bin['duration_bin'] = cnt_bin['duration_bin'].astype(str)
     
-    fig, ax = plt.subplots(figsize=(10, 6))
-    bars = ax.bar(x='duration_bin', height='bin_count', data=cnt_bin)
+    fig = px.bar(cnt_bin, x='duration_bin', y='bin_count',
+                 labels={'duration_bin': 'Duration (seconds)', 'bin_count': 'Count'},
+                 title=f"Buckets for: {class_name}")
     
-    for bar in bars:
-        yval = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width()/2, yval + 1, round(yval, 2), ha='center', va='bottom')
+    fig.update_layout(xaxis_tickangle=-45)
     
-    ax.set_title(f"Buckets for: {class_name}")
-    ax.set_xticklabels(cnt_bin['duration_bin'], rotation=45, ha='right')
-    ax.set_yticks([])
-    ax.set_xlabel('Duration (seconds)')
-    ax.set_ylabel('Count')
-    sns.despine(ax=ax, bottom=True, left=True)
-    plt.tight_layout()
+    for i in range(len(fig.data[0].x)):
+        fig.add_annotation(
+            x=fig.data[0].x[i],
+            y=fig.data[0].y[i],
+            text=f"{fig.data[0].y[i]:.0f}",
+            showarrow=False,
+            yshift=10
+        )
     
-    st.pyplot(fig)
-    
+    return fig
+
 def overall_class_stats(df, overall_class):
     """
     Returns the longest continuous segment of a given overall class along with its start and end indices
@@ -178,11 +196,15 @@ def overall_class_stats(df, overall_class):
             max_cnt = max(cnt, max_cnt)
         else:
             end = class_indices[i]
-            cnt_arr.append((cnt, start, end))
+            formatted_output = f"{start} to {end}: {cnt}"
+            cnt_arr.append(formatted_output)
             start = class_indices[i + 1]
             cnt = 1
     
-    cnt_arr.append((cnt, start, end))  # To account for the last sequence
-    max_sequence = max(cnt_arr, key=lambda x: x[0])
+    end = class_indices[-1]
+    formatted_output = f"{start} to {end}: {cnt}"
+    cnt_arr.append(formatted_output)
     
-    return max_sequence
+    max_sequence = max(cnt_arr, key=lambda x: int(x.split(': ')[1]))
+    
+    return cnt_arr, max_sequence
