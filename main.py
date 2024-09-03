@@ -1,6 +1,6 @@
 import pandas as pd
 import streamlit as st
-from util import process_dataset, display_dataset
+from util import process_dataset, overall_class_stats  # Import the function from util
 
 st.set_page_config(layout="wide")
 
@@ -16,8 +16,7 @@ if uploaded is not None:
         st.error(df)
     else:
         st.success('File successfully uploaded and processed.')
-        st.session_state.df = df 
-        # dp = display_dataset(df)
+        st.session_state.df = df  
 
     #---- SIDEBAR ----
     st.sidebar.header("Filter :")
@@ -49,9 +48,23 @@ if uploaded is not None:
 
     col1, col2 = st.columns(2)
     if col1.button("View Plots"):
-        st.switch_page("pages/plots.py")
+        st.switch_page("pages/Plots.py")
     if col2.button("View EDA"):
         st.switch_page("pages/EDA.py")
+
+    if st.sidebar.button("Generate Class Statistics"):
+        overall_class = st.sidebar.selectbox("Select Overall Class for Stats", options=df["Overall class"].unique())
+        
+        file_path = 'results.txt'
+        cnt_arr, max_sequence = overall_class_stats(df, overall_class, file_path)
+        
+        with open(file_path, 'r') as file:
+            st.download_button(
+                label="Download Class Statistics",
+                data=file,
+                file_name=file_path,
+                mime='text/plain'
+            )
 
 else:
     st.warning("Please upload a CSV file to get started.")
