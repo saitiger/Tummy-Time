@@ -225,7 +225,7 @@ def overall_class_stats(df, overall_class, file_path='results.txt'):
     
     # Save results to a text file
     with open(file_path, 'w') as f:
-        for line in cnt_arr[:5]:  # Save only the first 5 lines
+        for line in cnt_arr:  
             f.write(line + '\n')
     
-    return cnt_arr, max_sequence
+    return max_sequence,sorted(cnt_arr,key=cnt,reverse=True)
