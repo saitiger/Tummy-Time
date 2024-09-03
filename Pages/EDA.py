@@ -30,10 +30,12 @@ st.write(df.describe())
 st.subheader("Overall Class Statistics")
 selected_class = st.selectbox("Select a class for detailed stats:", options=df["Overall class"].unique())
 cnt_arr, max_sequence = overall_class_stats(df, selected_class)
-st.write(f"Longest continuous segment for {selected_class}: {max_sequence}")
-st.write("All segments:")
-for segment in cnt_arr:
-    st.write(segment)
+st.write(f"Preview of Segments for {selected_class}: {max_sequence}")
+st.write(f"Maximum Consecutive Rows {cnt_arr}")
+
+# st.write("All segments:")
+# for segment in cnt_arr:
+#     st.write(segment)
 
 if st.button("Back to Main Page"):
     st.switch_page("main.py")
