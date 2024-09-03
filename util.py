@@ -149,6 +149,9 @@ def create_plot(df):
     return fig
 
 def plot_bins(df, class_name):
+    """
+    Plots bins/blocks based on the duration of the segment of the provided class.
+    """
     same_class_mask = df['Overall class'] == df['Overall class'].shift(1)
     df['Increment'] = np.where(same_class_mask, 10, 0)
     df['Rolling Sum'] = df['Increment'].groupby((~same_class_mask).cumsum()).cumsum() / 1000
