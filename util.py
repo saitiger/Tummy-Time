@@ -9,72 +9,6 @@ import io
 
 csv.field_size_limit(int(1e9)) 
 
-def processed_file_analysis(file):
-    """
-    Analyze a processed CSV file.
-    
-    :param file: Streamlit UploadedFile object
-    :return: Processed DataFrame
-    """
-    df = pd.read_csv(file, skiprows=99)
-    df.rename(columns={'Unnamed: 0': 'Timing'}, inplace=True)
-    df['Timing'] = pd.to_datetime(df['Timing'], format='%Y-%m-%d %H:%M:%S:%f')
-    df['Milliseconds'] = df['Timing'].dt.microsecond // 1000
-    df['Time Diff'] = df['Milliseconds'].diff().fillna(10.0)
-    df.loc[df['Time Diff'] < 0, 'Time Diff'] = 10.0
-    
-    return df
-
-import numpy as np
-
-def process_row(row, S5=140):
-    try:
-        A = row[0]
-        B, C, D = map(float, row[1:4])
-    except (ValueError, IndexError):
-        return None
-
-    if B == 0 and C == 0 and D == 0:
-        return None
-    
-    angle_360 = np.sign(B) * np.arccos(-D / np.sqrt(B**2 + D**2)) * 180 / np.pi + 180
-    angle_updown = np.arcsin(C / np.sqrt(B**2 + C**2 + D**2)) * 180 / np.pi
-    body_rotation = "supine-recline" if S5 < angle_360 < (S5 + 180) else "prone-sit"
-    
-    if body_rotation == "prone-sit":
-        prone_sit_class = np.select([
-            angle_updown > 0,
-            angle_updown > -23,
-            angle_updown > -63
-        ], [
-            "prone",
-            "prone supported",
-            "upright"
-        ], default="sitting")
-        supine_recline_class = ""
-    else:
-        supine_recline_class = np.select([
-            angle_updown > 15,
-            angle_updown < -36,
-            angle_360 < (S5 + 69),
-            angle_360 > (S5 + 101)
-        ], [
-            "upsidedown",
-            "reclined",
-            "left side",
-            "right side"
-        ], default="supine")
-        prone_sit_class = ""
-    
-    # Ensure prone_sit_class and supine_recline_class are strings
-    prone_sit_class = str(prone_sit_class) if isinstance(prone_sit_class, np.ndarray) else prone_sit_class
-    supine_recline_class = str(supine_recline_class) if isinstance(supine_recline_class, np.ndarray) else supine_recline_class
-    
-    overall_class = (prone_sit_class + supine_recline_class).strip()
-    
-    return [A, B, C, D, angle_360, angle_updown, body_rotation, prone_sit_class, supine_recline_class, overall_class]
-
-
 @st.cache_data
 def process_dataset(file):
     """
@@ -174,18 +108,6 @@ def process_dataset(file):
 def display_dataset(df):
     # return df.iloc[:, :-2]
     return df.head()
-
-def dataset_description(df):
-    """
-    Provides a description of the dataset including the duration of each class
-    """
-    class_counts = df['Overall class'].fillna('NaN').groupby(df['Overall class'].fillna('Missing Rows')).count().reset_index(name='Class Count')
-    class_counts['Duration in seconds'] = class_counts['Class Count'] / 100
-    class_counts = class_counts[['Overall class', 'Duration in seconds']]
-    
-    total_duration = class_counts['Duration in seconds'].sum()
-    
-    return class_counts, total_duration
 
 def dataset_description(df):
     """
