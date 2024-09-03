@@ -223,9 +223,9 @@ def overall_class_stats(df, overall_class, file_path='results.txt'):
     
     max_sequence = max(cnt_arr, key=lambda x: int(x.split(': ')[1]))
     
-    # Save results to a text file
+    # Save results to a text file for logging 
     with open(file_path, 'w') as f:
         for line in cnt_arr:  
             f.write(line + '\n')
-    
-    return max_sequence,sorted(cnt_arr,key=cnt,reverse=True)
+    # Show only the first ten rows and save the others for logging 
+    return max_sequence,sorted(cnt_arr,key=lambda x: int(x.split(': ')[1]),reverse=True)[:10]
