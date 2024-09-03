@@ -1,5 +1,4 @@
 import streamlit as st
-import matplotlib.pyplot as plt
 from util import dataset_description, overall_class_stats
 
 st.set_page_config(layout="wide")
@@ -11,21 +10,30 @@ if 'df' not in st.session_state or st.session_state.df is None:
 
 df = st.session_state.df
 
-st.title("EDA")
+st.title("Exploratory Data Analysis")
 
-c,t = dataset_description(df)
+class_counts, total_duration, duration_str = dataset_description(df)
 
 # Total Duration of Video
 st.subheader("Total Duration of Video")
-st.write(t)
+st.write(duration_str)
 
 # Class Count
 st.subheader("Count of Each Class")
-st.write(c)
+st.dataframe(class_counts)
 
 # Stats
 st.subheader("Column Stats")
 st.write(df.describe())
+
+# Overall Class Stats
+st.subheader("Overall Class Statistics")
+selected_class = st.selectbox("Select a class for detailed stats:", options=df["Overall class"].unique())
+cnt_arr, max_sequence = overall_class_stats(df, selected_class)
+st.write(f"Longest continuous segment for {selected_class}: {max_sequence}")
+st.write("All segments:")
+for segment in cnt_arr:
+    st.write(segment)
 
 if st.button("Back to Main Page"):
     st.switch_page("pages/main.py")
