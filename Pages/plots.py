@@ -29,4 +29,4 @@ else:
 
 # Add a button to navigate back to the main page
 if st.button("Back to Main Page"):
-    st.switch_page("pages/main.py")
+    st.switch_page("main.py")
