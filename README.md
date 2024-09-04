@@ -15,6 +15,7 @@
 - Refactored functions. Tested code for files with 10M+ rows.
 - Updated script to handle large files on streamlit app, added config file.
 - Added Docker image file
+- Added visualizations for contiguous rows to debug sensor data and Blocks page for better viewing experience.
 
 **Future Work:**
 - Working on a deep learning model to correctly detect the posture of infants, thereby reducing manual work and labeling the dataset using Datavyu.
