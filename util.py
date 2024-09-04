@@ -5,11 +5,78 @@ import csv
 from functools import partial
 import plotly.graph_objects as go
 import plotly.express as px
+import plotly.figure_factory as ff
 import io
 
 csv.field_size_limit(int(1e9)) 
 
-@st.cache_data
+# Depreciated 
+# def processed_file_analysis(file):
+#     """
+#     Analyze a processed CSV file.
+    
+#     :param file: Streamlit UploadedFile object
+#     :return: Processed DataFrame
+#     """
+#     df = pd.read_csv(file, skiprows=99)
+#     df.rename(columns={'Unnamed: 0': 'Timing'}, inplace=True)
+#     df['Timing'] = pd.to_datetime(df['Timing'], format='%Y-%m-%d %H:%M:%S:%f')
+#     df['Milliseconds'] = df['Timing'].dt.microsecond // 1000
+#     df['Time Diff'] = df['Milliseconds'].diff().fillna(10.0)
+#     df.loc[df['Time Diff'] < 0, 'Time Diff'] = 10.0
+    
+#     return df
+
+# Depreciated 
+# def process_row(row, S5=140):
+#     try:
+#         A = row[0]
+#         B, C, D = map(float, row[1:4])
+#     except (ValueError, IndexError):
+#         return None
+
+#     if B == 0 and C == 0 and D == 0:
+#         return None
+    
+#     angle_360 = np.sign(B) * np.arccos(-D / np.sqrt(B**2 + D**2)) * 180 / np.pi + 180
+#     angle_updown = np.arcsin(C / np.sqrt(B**2 + C**2 + D**2)) * 180 / np.pi
+#     body_rotation = "supine-recline" if S5 < angle_360 < (S5 + 180) else "prone-sit"
+    
+#     if body_rotation == "prone-sit":
+#         prone_sit_class = np.select([
+#             angle_updown > 0,
+#             angle_updown > -23,
+#             angle_updown > -63
+#         ], [
+#             "prone",
+#             "prone supported",
+#             "upright"
+#         ], default="sitting")
+#         supine_recline_class = ""
+#     else:
+#         supine_recline_class = np.select([
+#             angle_updown > 15,
+#             angle_updown < -36,
+#             angle_360 < (S5 + 69),
+#             angle_360 > (S5 + 101)
+#         ], [
+#             "upsidedown",
+#             "reclined",
+#             "left side",
+#             "right side"
+#         ], default="supine")
+#         prone_sit_class = ""
+    
+#     # Ensure prone_sit_class and supine_recline_class are strings
+#     prone_sit_class = str(prone_sit_class) if isinstance(prone_sit_class, np.ndarray) else prone_sit_class
+#     supine_recline_class = str(supine_recline_class) if isinstance(supine_recline_class, np.ndarray) else supine_recline_class
+    
+#     overall_class = (prone_sit_class + supine_recline_class).strip()
+    
+#     return [A, B, C, D, angle_360, angle_updown, body_rotation, prone_sit_class, supine_recline_class, overall_class]
+
+
+@st.cache_data(show_spinner=False)
 def process_dataset(file):
     """
     Process a large dataset from a CSV file.
@@ -18,7 +85,6 @@ def process_dataset(file):
     :return: Processed DataFrame
     """
     try:
-        # Attempt to read the file directly with pandas
         df = pd.read_csv(file, encoding='utf-8', skiprows=99, on_bad_lines='skip', header=None)
     except UnicodeDecodeError:
         try:
@@ -39,7 +105,6 @@ def process_dataset(file):
     df['Supine-recline class'] = ""
     df['Overall class'] = ""
 
-    # Define constants (example values)
     S5 = 140
 
     # Calculate '360 angle' and 'Up/down angle' with error handling for division by zero
@@ -105,9 +170,9 @@ def process_dataset(file):
 
     return df
 
-def display_dataset(df):
-    # return df.iloc[:, :-2]
-    return df.head()
+# def display_dataset(df):
+#     # return df.iloc[:, :-2]
+#     return df.head()
 
 def dataset_description(df):
     """
@@ -118,14 +183,17 @@ def dataset_description(df):
     class_counts = class_counts[['Overall class', 'Duration in seconds']]
     
     total_duration_seconds = class_counts['Duration in seconds'].sum()
-
-    if total_duration_seconds >= 60:
-        total_duration_minutes = total_duration_seconds / 60
-        duration_str = f"Duration of Video: {total_duration_minutes:.2f} minutes"
-    else:
-        duration_str = f"Duration of Video: {total_duration_seconds:.2f} seconds"
     
-    return class_counts, total_duration_seconds, duration_str
+    if total_duration_seconds >= 3600:
+        total_duration_hours = total_duration_seconds / 3600
+        duration_str = f"Duration of Video: {total_duration_hours:.2f} Hours"
+    elif total_duration_seconds >= 60 and total_duration_seconds<3600 :
+        total_duration_minutes = total_duration_seconds / 60
+        duration_str = f"Duration of Video: {total_duration_minutes:.2f} Minutes"
+    else:
+        duration_str = f"Duration of Video: {total_duration_seconds:.2f} Seconds"
+    
+    return class_counts, duration_str
 
 def create_plot(df):
     class_counts = df['Overall class'].fillna('NaN').groupby(df['Overall class'].fillna('Missing Rows')).count().reset_index(name='Class Count')
@@ -149,9 +217,6 @@ def create_plot(df):
     return fig
 
 def plot_bins(df, class_name):
-    """
-    Plots bins/blocks based on the duration of the segment of the provided class.
-    """
     same_class_mask = df['Overall class'] == df['Overall class'].shift(1)
     df['Increment'] = np.where(same_class_mask, 10, 0)
     df['Rolling Sum'] = df['Increment'].groupby((~same_class_mask).cumsum()).cumsum() / 1000
@@ -196,10 +261,9 @@ def plot_bins(df, class_name):
     
     return fig
 
-def overall_class_stats(df, overall_class, file_path='results.txt'):
+def overall_class_stats(df, overall_class):
     """
-    Returns the longest continuous segment of a given overall class along with its start and end indices,
-    and saves the results to a text file.
+    Returns the longest contiguous segment of a given overall class along with its start and end indices.
     """
     class_indices = df[df['Overall class'] == overall_class].index
     cnt_arr = []
@@ -223,9 +287,66 @@ def overall_class_stats(df, overall_class, file_path='results.txt'):
     
     max_sequence = max(cnt_arr, key=lambda x: int(x.split(': ')[1]))
     
-    # Save results to a text file for logging 
-    with open(file_path, 'w') as f:
-        for line in cnt_arr:  
-            f.write(line + '\n')
+    # Save results to a text file for logging (Depreciated)
+    # Created a separated page on Streamlit based on the requirements
+    
+    # with open(file_path, 'w') as f:
+    #     for line in cnt_arr:  
+    #         f.write(line + '\n')
+
     # Show only the first ten rows and save the others for logging 
-    return max_sequence,sorted(cnt_arr,key=lambda x: int(x.split(': ')[1]),reverse=True)[:10]
+    # cnt_arr_display = sorted(cnt_arr,key=lambda x: int(x.split(': ')[1]),reverse=True)[:10]
+
+    return max_sequence,cnt_arr
+
+def plot_contiguous_blocks(contiguous_blocks,threshold):
+    """
+    Plot a bar chart using Plotly Express to show the count of contiguous blocks for a given overall class.
+    
+    Args:
+        contiguous_blocks (list): A list of formatted strings representing the contiguous blocks,
+                                 e.g. ["0 to 10: 11", "12 to 15: 4", ...]
+    """
+    sequence_lengths = [int(x.split(': ')[1]) for x in contiguous_blocks]
+    length_counts = pd.Series(sequence_lengths).value_counts(ascending=False).reset_index()
+    length_counts.columns = ['Sequence Length', 'Count']
+
+    df_filtered = length_counts[length_counts['Count'] > threshold]
+
+    fig = px.bar(df_filtered, x='Sequence Length', y='Count', 
+             title='Bar Plot of Sequence Length vs Count (Filtered)',
+             labels={'Sequence Length': 'Sequence Length', 'Count': 'Count'},
+             color='Count', color_continuous_scale='Blues')
+
+    fig.update_layout(xaxis_title='Sequence Length',
+                  yaxis_title='Count',
+                  xaxis_tickangle=-90) 
+
+    return fig 
+
+def plot_contiguous_blocks_scatter(contiguous_blocks,threshold):
+    """
+    Plot a bar chart using Plotly Express to show the count of contiguous blocks for a given overall class.
+    
+    Args:
+        contiguous_blocks (list): A list of formatted strings representing the contiguous blocks,
+                                 e.g. ["0 to 10: 11", "12 to 15: 4", ...]
+    """
+    sequence_lengths = [int(x.split(': ')[1]) for x in contiguous_blocks]
+    length_counts = pd.Series(sequence_lengths).value_counts(ascending=False).reset_index()
+    length_counts.columns = ['Sequence Length', 'Count']
+
+    df_filtered = length_counts[length_counts['Count'] > threshold]
+
+    fig2 = px.scatter(df_filtered, x='Sequence Length', y='Count', 
+                 title='Scatter Plot of Sequence Length vs Count',
+                 labels={'x': 'Sequence Length', 'y': 'Count'},
+                 opacity=0.6)
+
+    # Set the y-axis to a logarithmic scale
+    fig2.update_layout(yaxis_type="log", 
+                  xaxis_title='Sequence Length', 
+                  yaxis_title='Count (Log Scale)',
+                  height=600, width=1200)
+
+    return fig2 
