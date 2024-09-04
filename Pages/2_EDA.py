@@ -12,7 +12,7 @@ df = st.session_state.df
 
 st.title("Exploratory Data Analysis")
 
-class_counts, total_duration, duration_str = dataset_description(df)
+class_counts, duration_str = dataset_description(df)
 
 # Total Duration of Video
 st.subheader("Total Duration of Video")
@@ -29,10 +29,13 @@ st.write(df.describe())
 # Overall Class Stats
 st.subheader("Overall Class Statistics")
 selected_class = st.selectbox("Select a class for detailed stats:", options=df["Overall class"].unique())
-cnt_arr, max_sequence = overall_class_stats(df, selected_class)
-st.write(f"Preview of Segments for {selected_class}: {max_sequence}")
-st.write(f"Maximum Consecutive Rows {cnt_arr}")
+max_sequence,cnt_arr = overall_class_stats(df, selected_class)
+preview = cnt_arr[:5]
+st.write(f"Preview of Segments for {selected_class}: {preview}")
+st.write(f"Maximum Consecutive Rows {max_sequence}")
 
+# Moved to Blocks Page for better viewing experience based on the Lab Requirements 
+# for easy debuggging experience.
 # st.write("All segments:")
 # for segment in cnt_arr:
 #     st.write(segment)
