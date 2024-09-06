@@ -1,1 +1,2 @@
-Initial Model for detection of posture of infants 
+- Added initial Model for detection of posture of infants.
+- Currently trained on only one video and with basic feature engineering and fine tuning.
