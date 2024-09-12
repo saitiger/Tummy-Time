@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+import os 
 import time
 from util import process_dataset, overall_class_stats  # Import the function from util
 
@@ -51,12 +52,16 @@ if uploaded is not None:
 
     st.dataframe(df_preview)
 
+    # Create the new filename
+    original_filename = os.path.splitext(uploaded.name)[0]
+    processed_filename = f"{original_filename}_processed.csv"
+
      # Add a download button for the complete dataset
     csv = df.to_csv(index=False)
     st.download_button(
         label="Download Complete Filtered Dataset",
         data=csv,
-        file_name="filtered_dataset.csv",
+        file_name=processed_filename,
         mime="text/csv",
     )
 
