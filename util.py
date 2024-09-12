@@ -203,7 +203,12 @@ def create_plot(df):
                  labels={'Overall class': 'Category', 'Duration in seconds': 'Duration in Seconds'},
                  title='Duration of Each Class')
     
-    fig.update_layout(xaxis_tickangle=-45, yaxis_title='Duration in Seconds')
+    fig.update_layout(
+        xaxis_tickangle=-45, 
+        yaxis_title='Duration in Seconds',
+        xaxis=dict(showgrid=False),
+        yaxis=dict(showgrid=False) 
+        )
     
     for i in range(len(fig.data[0].x)):
         fig.add_annotation(
@@ -248,7 +253,10 @@ def plot_bins(df, class_name):
                  labels={'duration_bin': 'Duration (seconds)', 'bin_count': 'Count'},
                  title=f"Buckets for: {class_name}")
     
-    fig.update_layout(xaxis_tickangle=-45)
+    fig.update_layout(xaxis_tickangle=-45,
+                      xaxis=dict(showgrid=False),
+        yaxis=dict(showgrid=False) 
+        )
     
     for i in range(len(fig.data[0].x)):
         fig.add_annotation(
@@ -299,32 +307,40 @@ def overall_class_stats(df, overall_class):
 
     return max_sequence,cnt_arr
 
-def plot_contiguous_blocks(contiguous_blocks,threshold):
+def plot_contiguous_blocks(contiguous_blocks, threshold, selected_option):
     """
     Plot a bar chart using Plotly Express to show the count of contiguous blocks for a given overall class.
     
     Args:
         contiguous_blocks (list): A list of formatted strings representing the contiguous blocks,
                                  e.g. ["0 to 10: 11", "12 to 15: 4", ...]
+        threshold (int): The threshold for filtering data.
+        selected_option (str): The option selected to filter the data.
     """
     sequence_lengths = [int(x.split(': ')[1]) for x in contiguous_blocks]
     length_counts = pd.Series(sequence_lengths).value_counts(ascending=False).reset_index()
     length_counts.columns = ['Sequence Length', 'Count']
 
-    df_filtered = length_counts[length_counts['Count'] > threshold]
+    df_filtered = length_counts[length_counts[selected_option] > threshold]
 
+    # Generate dynamic labels
+    dynamic_x_label = f'Sequence Length (Filtered by {selected_option})'
+    dynamic_y_label = f'Count (Threshold: {threshold})'
+    dynamic_title = f'Bar Plot of Sequence Length vs Count (Filtered by {selected_option} > {threshold})'
+
+    # Create the bar plot
     fig = px.bar(df_filtered, x='Sequence Length', y='Count', 
-             title='Bar Plot of Sequence Length vs Count (Filtered)',
-             labels={'Sequence Length': 'Sequence Length', 'Count': 'Count'},
-             color='Count', color_continuous_scale='Blues')
+                 title=dynamic_title,
+                 labels={'Sequence Length': dynamic_x_label, 'Count': dynamic_y_label},
+                 color='Count', color_continuous_scale='Blues')
 
-    fig.update_layout(xaxis_title='Sequence Length',
-                  yaxis_title='Count',
-                  xaxis_tickangle=-90) 
+    fig.update_layout(xaxis_title=dynamic_x_label,
+                      yaxis_title=dynamic_y_label,
+                      xaxis_tickangle=-90)
 
     return fig 
 
-def plot_contiguous_blocks_scatter(contiguous_blocks,threshold):
+def plot_contiguous_blocks_scatter(contiguous_blocks,threshold,selected_option):
     """
     Plot a bar chart using Plotly Express to show the count of contiguous blocks for a given overall class.
     
@@ -336,11 +352,17 @@ def plot_contiguous_blocks_scatter(contiguous_blocks,threshold):
     length_counts = pd.Series(sequence_lengths).value_counts(ascending=False).reset_index()
     length_counts.columns = ['Sequence Length', 'Count']
 
-    df_filtered = length_counts[length_counts['Count'] > threshold]
+    df_filtered = length_counts[length_counts[selected_option] > threshold]
 
+    # Generate dynamic labels
+    dynamic_x_label = f'Sequence Length (Filtered by {selected_option})'
+    dynamic_y_label = f'Count (Threshold: {threshold})'
+    dynamic_title = f'Scatter Plot of Sequence Length vs Count (Filtered by {selected_option} > {threshold})'
+
+    
     fig2 = px.scatter(df_filtered, x='Sequence Length', y='Count', 
-                 title='Scatter Plot of Sequence Length vs Count',
-                 labels={'x': 'Sequence Length', 'y': 'Count'},
+                 title='dynamic_title',
+                 labels={'Sequence Length': dynamic_x_label, 'Count': dynamic_y_label},
                  opacity=0.6)
 
     # Set the y-axis to a logarithmic scale
