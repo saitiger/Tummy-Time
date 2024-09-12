@@ -59,7 +59,7 @@ if uploaded is not None:
      # Add a download button for the complete dataset
     csv = df.to_csv(index=False)
     st.download_button(
-        label="Download Complete Filtered Dataset",
+        label="Download Processed Dataset",
         data=csv,
         file_name=processed_filename,
         mime="text/csv",
