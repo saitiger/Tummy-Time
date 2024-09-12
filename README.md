@@ -16,6 +16,11 @@
 - Updated script to handle large files on streamlit app, added config file.
 - Added Docker image file
 - Added visualizations for contiguous rows to debug sensor data and Blocks page for better viewing experience.
+- Added Option to filter Block plots.
+- Added the option to download the processed file.
+- Added file structure for documentation and comments to understand the code.
 
 **Future Work:**
 - Working on a deep learning model to correctly detect the posture of infants, thereby reducing manual work and labeling the dataset using Datavyu.
+- Deployed initial model for posture detection. Received feedback on detection.
+- Working on trying other models for detection and obtaining images for few shot learning for fine-tuning.
