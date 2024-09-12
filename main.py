@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 import time
-from util import process_dataset, overall_class_stats 
+from util import process_dataset, overall_class_stats  # Import the function from util
 
 st.set_page_config(layout="wide")
 
@@ -43,13 +43,22 @@ if uploaded is not None:
         default=st.session_state.class_type
     )
 
-    df_selection = df[df["Overall class"].isin(class_type)].head()
+    df_preview = df[df["Overall class"].isin(class_type)].head()
 
-    if df_selection.empty:
+    if df_preview.empty:
         st.warning("No data available based on the current filters!")
         st.stop()
 
-    st.dataframe(df_selection)
+    st.dataframe(df_preview)
+
+     # Add a download button for the complete dataset
+    csv = df.to_csv(index=False)
+    st.download_button(
+        label="Download Complete Filtered Dataset",
+        data=csv,
+        file_name="filtered_dataset.csv",
+        mime="text/csv",
+    )
 
     col1, col2,col3 = st.columns(3)
     with col1:
