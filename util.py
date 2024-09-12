@@ -81,8 +81,11 @@ def process_dataset(file):
     """
     Process a large dataset from a CSV file.
 
-    :param file: Streamlit UploadedFile object
-    :return: Processed DataFrame
+    Parameter : Streamlit UploadedFile object
+   
+    Returns : 
+    
+    Processed DataFrame
     """
     try:
         df = pd.read_csv(file, encoding='utf-8', skiprows=99, on_bad_lines='skip', header=None)
@@ -177,6 +180,17 @@ def process_dataset(file):
 def dataset_description(df):
     """
     Provides a description of the dataset including the duration of each class
+    
+    Parameters:
+
+    df (pandas.DataFrame): The processed dataframe.
+
+    Returns:
+
+    tuple: (pandas.DataFrame, str)
+
+    DataFrame containing class counts and durations.
+    String describing the total duration of the video.
     """
     class_counts = df['Overall class'].fillna('NaN').groupby(df['Overall class'].fillna('Missing Rows')).count().reset_index(name='Class Count')
     class_counts['Duration in seconds'] = class_counts['Class Count'] / 100
@@ -196,6 +210,17 @@ def dataset_description(df):
     return class_counts, duration_str
 
 def create_plot(df):
+    """
+    Creates a bar plot showing the duration of each class
+
+    Parameters:
+
+    df (pandas.DataFrame): The processed dataframe.
+
+    Returns:
+
+    Figure representing the bar plot.
+    """
     class_counts = df['Overall class'].fillna('NaN').groupby(df['Overall class'].fillna('Missing Rows')).count().reset_index(name='Class Count')
     class_counts['Duration in seconds'] = class_counts['Class Count'] / 100
     
@@ -222,6 +247,19 @@ def create_plot(df):
     return fig
 
 def plot_bins(df, class_name):
+    """
+    Creates a bar plot showing the distribution of time durations for a specific class.
+    0.1 seconds spaced bins are being plooted.
+
+    Parameters:
+
+    df (pandas.DataFrame): The processed dataframe.
+    class_name (str): The name of the class to plot.
+
+    Returns:
+
+    Figure or str: Figure if successful, or an error message string if no data is available. 
+    """
     same_class_mask = df['Overall class'] == df['Overall class'].shift(1)
     df['Increment'] = np.where(same_class_mask, 10, 0)
     df['Rolling Sum'] = df['Increment'].groupby((~same_class_mask).cumsum()).cumsum() / 1000
@@ -272,6 +310,18 @@ def plot_bins(df, class_name):
 def overall_class_stats(df, overall_class):
     """
     Returns the longest contiguous segment of a given overall class along with its start and end indices.
+    
+    Parameters:
+
+    df (pandas.DataFrame): The processed dataframe.
+    overall_class (str): The name of the class to analyze.
+
+    Returns:
+
+    tuple: (str, list)
+
+    String describing the maximum consecutive sequence.
+    List of strings describing all contiguous segments.
     """
     class_indices = df[df['Overall class'] == overall_class].index
     cnt_arr = []
@@ -309,7 +359,7 @@ def overall_class_stats(df, overall_class):
 
 def plot_contiguous_blocks(contiguous_blocks, threshold, selected_option):
     """
-    Plot a bar chart using Plotly Express to show the count of contiguous blocks for a given overall class.
+    Plot a bar chart showing the count of contiguous blocks for a given overall class.
     
     Args:
         contiguous_blocks (list): A list of formatted strings representing the contiguous blocks,
@@ -342,8 +392,8 @@ def plot_contiguous_blocks(contiguous_blocks, threshold, selected_option):
 
 def plot_contiguous_blocks_scatter(contiguous_blocks,threshold,selected_option):
     """
-    Plot a bar chart using Plotly Express to show the count of contiguous blocks for a given overall class.
-    
+    Plot a scatter plot showing the count of contiguous blocks for a given overall class.
+    Y-axis is log scale.
     Args:
         contiguous_blocks (list): A list of formatted strings representing the contiguous blocks,
                                  e.g. ["0 to 10: 11", "12 to 15: 4", ...]
@@ -354,15 +404,9 @@ def plot_contiguous_blocks_scatter(contiguous_blocks,threshold,selected_option):
 
     df_filtered = length_counts[length_counts[selected_option] > threshold]
 
-    # Generate dynamic labels
-    dynamic_x_label = f'Sequence Length (Filtered by {selected_option})'
-    dynamic_y_label = f'Count (Threshold: {threshold})'
-    dynamic_title = f'Scatter Plot of Sequence Length vs Count (Filtered by {selected_option} > {threshold})'
-
-    
     fig2 = px.scatter(df_filtered, x='Sequence Length', y='Count', 
-                 title='dynamic_title',
-                 labels={'Sequence Length': dynamic_x_label, 'Count': dynamic_y_label},
+                 title='Scatter Plot of Sequence Length vs Count',
+                 labels={'x': 'Sequence Length', 'y': 'Count'},
                  opacity=0.6)
 
     # Set the y-axis to a logarithmic scale
