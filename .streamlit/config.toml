@@ -4,5 +4,5 @@ enableCORS=false
 enableXsrfProtection=false
 maxMessageSize = 1024
 
-[global]
-dataFrameSerialization = "legacy"
+# [global]
+# dataFrameSerialization = "legacy"
