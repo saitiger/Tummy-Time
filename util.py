@@ -5,8 +5,10 @@ import csv
 from functools import partial
 import plotly.graph_objects as go
 import plotly.express as px
+from plotly.subplots import make_subplots
 import plotly.figure_factory as ff
 import io
+from datetime import datetime, timedelta
 
 csv.field_size_limit(int(1e9)) 
 
@@ -416,3 +418,94 @@ def plot_contiguous_blocks_scatter(contiguous_blocks,threshold,selected_option):
                   height=600, width=1200)
 
     return fig2 
+
+def create_data_blocks(df, start_time, block_size=50000):
+    """
+    Create blocks of data based on starting time.
+    
+    :param df: DataFrame with processed data
+    :param start_time: Starting time for the blocks (datetime object)
+    :param block_size: Size of each block (default: 50000)
+    :return: List of DataFrames, each representing a block
+    """
+    df_sorted = df[df['A'] >= start_time].sort_values('A')
+    total_blocks = (len(df_sorted) + block_size - 1) // block_size
+    return [df_sorted.iloc[i*block_size:(i+1)*block_size] for i in range(total_blocks)]
+
+def plot_block(block):
+    """
+    Create a scatter plot for a given block of data.
+    
+    :param block: DataFrame representing a block of data
+    :return: Plotly Figure object
+    """
+    # Use a more efficient color mapping
+    unique_classes = block['Overall class'].unique()
+    color_map = {cls: f'rgb({np.random.randint(0, 256)}, {np.random.randint(0, 256)}, {np.random.randint(0, 256)})' 
+                 for cls in unique_classes}
+
+    # Create subplots for better performance
+    fig = make_subplots(rows=1, cols=1)
+
+    # Use go.Scattergl for better performance with large datasets
+    for cls in unique_classes:
+        df_class = block[block['Overall class'] == cls]
+        fig.add_trace(go.Scattergl(
+            x=df_class['A'],
+            y=df_class['Up/down angle'],
+            mode='markers',
+            marker=dict(color=color_map[cls], size=4, opacity=0.7),
+            name=cls,
+            legendgroup=cls,
+            showlegend=True
+        ))
+
+    fig.update_layout(
+        title={
+            'text': 'Body Position Analysis Over Time',
+            'font': dict(size=28, color='#FFFFFF', family="Arial, sans-serif"),
+            'x': 0.5,
+            'xanchor': 'center',
+            'y': 0.95,
+            'yanchor': 'top'
+        },
+        xaxis_title='Time',
+        yaxis_title='Up/Down Angle (degrees)',
+        font=dict(family="Arial, sans-serif", size=14, color="#FFFFFF"),
+        legend_title='Body Position',
+        legend=dict(
+            orientation="v",
+            yanchor="middle",
+            y=0.5,
+            xanchor="left",
+            x=1.02,
+            font=dict(color="#FFFFFF")
+        ),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        hovermode='closest',
+        margin=dict(t=100, b=50, l=50, r=150),
+    )
+
+    fig.update_xaxes(
+        showgrid=True, gridwidth=1, gridcolor='#555555',
+        showline=True, linewidth=2, linecolor='#FFFFFF',
+        tickformat='%H:%M:%S\n%Y-%m-%d',
+        tickfont=dict(color="#FFFFFF")
+    )
+    fig.update_yaxes(
+        showgrid=True, gridwidth=1, gridcolor='#555555',
+        showline=True, linewidth=2, linecolor='#FFFFFF',
+        zeroline=True, zerolinewidth=2, zerolinecolor='#FFFFFF',
+        tickfont=dict(color="#FFFFFF")
+    )
+
+    return fig
+
+def parse_datetime(date_val):
+    if isinstance(date_val, str):
+        return pd.to_datetime(date_val.rsplit(':', 1)[0], format='%Y-%m-%d %H:%M:%S')
+    elif isinstance(date_val, pd.Timestamp):
+        return date_val
+    else:
+        raise ValueError(f"Unexpected data type: {type(date_val)}")
