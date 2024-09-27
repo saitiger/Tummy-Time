@@ -23,6 +23,7 @@
 - Added new plots and a new page for visualizing the change in position.
 - Tested new plots for validating the sensor and toy
 - Added data validation script
+- Added some additional data validation checks. Performed statistical tests for difference in means.
 
 **Future Work:**
 - Working on a deep learning model to correctly detect the posture of infants, thereby reducing manual work and labeling the dataset using Datavyu.
