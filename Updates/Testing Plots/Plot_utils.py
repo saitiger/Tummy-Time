@@ -10,7 +10,6 @@ def data_dict_fill(data_dictionary):
 # Usage 
 # my_dict = data_dict_fill(data_dict2)
 
-
 def demographic_plots(df, demographic_type, score_type, data_dictionary=None):
     """
     Creates plots of demographic data over different visits.
@@ -22,12 +21,10 @@ def demographic_plots(df, demographic_type, score_type, data_dictionary=None):
     - data_dictionary (pandas.DataFrame): Data dictionary *Optional for label mapping
     
     """
-    if data_dictionary is not None:
-
-        demographic_mapping = {
-            'sex': 'SEX', 'Sex': 'SEX', 'SEX': 'SEX',
-            'ethnicity': 'ETH', 'Ethnicity': 'ETH', 'eth': 'ETH', 'ETH': 'ETH',
-            'race': 'Race', 'Race': 'Race', 'RACE': 'Race'}
+    demographic_mapping = {
+        'sex': 'SEX', 'Sex': 'SEX', 'SEX': 'SEX',
+        'ethnicity': 'ETH', 'Ethnicity': 'ETH', 'eth': 'ETH', 'ETH': 'ETH',
+        'race': 'Race', 'Race': 'Race', 'RACE': 'Race'}
     
     if demographic_type not in demographic_mapping:
         raise ValueError("demographic_type must be one of 'Sex', 'Race' or 'Ethnicity'")
@@ -47,12 +44,14 @@ def demographic_plots(df, demographic_type, score_type, data_dictionary=None):
     plot_data.rename(columns={'value': score_type}, inplace=True)
     plot_data.drop(columns='variable', inplace=True)
     
-    label_mapping = dict(zip(
-        data_dictionary[data_dictionary['Variable'] == f'C_1_{demographic_type}']['Value'],
-        data_dictionary[data_dictionary['Variable'] == f'C_1_{demographic_type}']['Label']
-    ))
-    
-    plot_data[f'{demographic_type}'] = plot_data[demographic_type].map(label_mapping)
+    if data_dictionary is not None:
+        label_mapping = dict(zip(
+            data_dictionary[data_dictionary['Variable'] == f'C_1_{demographic_type}']['Value'],
+            data_dictionary[data_dictionary['Variable'] == f'C_1_{demographic_type}']['Label']
+        ))
+        plot_data[f'{demographic_type}'] = plot_data[demographic_type].map(label_mapping)
+    else:
+        plot_data[f'{demographic_type}'] = plot_data[demographic_type].astype(str)
     
     # Filter out groups with all zero values
     plot_data_filtered = plot_data.groupby(f'{demographic_type}').filter(lambda x: x[score_type].sum() > 0)
@@ -155,8 +154,9 @@ def Bayley_vs_APSP_plot(df, bs3_type='CSs', trt_value=1, data_dictionary=None):
             data_dictionary[data_dictionary['Variable'] == 'C_1_TRT']['Value'],
             data_dictionary[data_dictionary['Variable'] == 'C_1_TRT']['Label']
         ))
-    
-    group_type = label_mapping.get(trt_value)
+        group_type = label_mapping.get(trt_value, f"Group {trt_value}")
+    else:
+        group_type = f"Group {trt_value}"
     
     # Filter data based on C_1_TRT value
     plot_data = df_compare[df_compare['C_1_TRT'] == trt_value].drop(columns='C_1_TRT')
@@ -231,12 +231,14 @@ def create_toy_plot(df, toy_type = 'Gumball', data_dictionary = None ):
                 )
     
     # Add full treatment names to mean_data
-    label_mapping = dict(zip(
-        data_dictionary[data_dictionary['Variable'] == 'C_1_TRT']['Value'],
-        data_dictionary[data_dictionary['Variable'] == 'C_1_TRT']['Label']
-    ))
-
-    mean_data['Treatment Group'] = mean_data['C_1_TRT'].map(label_mapping)
+    if data_dictionary is not None:
+        label_mapping = dict(zip(
+            data_dictionary[data_dictionary['Variable'] == 'C_1_TRT']['Value'],
+            data_dictionary[data_dictionary['Variable'] == 'C_1_TRT']['Label']
+        ))
+        mean_data['Treatment Group'] = mean_data['C_1_TRT'].map(label_mapping)
+    else:
+        mean_data['Treatment Group'] = 'Group ' + mean_data['C_1_TRT'].astype(str)
     
     mean_data.drop(columns = 'C_1_TRT',inplace = True)
     
@@ -280,139 +282,3 @@ def create_toy_plot_grp_wise(df,grp,data_dictionary=None):
                'C_2_APS_Gn', 'C_3_APS_Gn', 'C_4_APS_Gn',
               'C_2_APS_Cn', 'C_3_APS_Cn', 'C_4_APS_Cn',
                'C_2_APS_Pn', 'C_3_APS_Pn', 'C_4_APS_Pn'
-              ]
-    
-    toy_data = df.loc[df['C_1_TRT']==grp,cols_set].drop(columns = 'C_1_TRT')
-    plot_df_toy = toy_data.mean().reset_index().rename(columns = {'index':'Toy Type',0:'Score'})
-    
-    if data_dictionary is not None:
-        label_mapping = dict(zip(
-            data_dictionary[data_dictionary['Variable'] == 'C_1_TRT']['Value'],
-            data_dictionary[data_dictionary['Variable'] == 'C_1_TRT']['Label']
-        ))
-    
-    group_type = label_mapping.get(grp)
-    
-    plot_df_toy['Visit'] = plot_df_toy['Toy Type'].str.extract('C_(\d+)_')
-    plot_df_toy['Toy Type'] = plot_df_toy['Toy Type'].str.extract('APS_(\w+)')
-    plot_df_toy['Visit'] = 'V' + plot_df_toy['Visit']
-
-    plot_df_toy['Toy Type'].replace({'Gn':'Gumball','Cn':'Cups','Pn':'Popup'},inplace = True)
-    custom_palette = ["#FF5733", "#33FF57", "#3357FF"]
-    plt.figure(figsize=(10, 6))
-    plt.title(f"APSP Scores for {group_type}")
-    sns.lineplot(data = plot_df_toy , x = 'Visit', y = 'Score', hue = 'Toy Type', palette = custom_palette)
-    sns.despine()
-    plt.show()
-    
-    return plot_df_toy
-
-# Usage 
-# create_toy_plot_grp_wise(df,3,my_dict)
-
-def plot_aps_scores(df, score_type='TWS', plot_type='boxplot', data_dictionary=None):
-    """
-    Create a box or strip plot of APS scores (TWS or RPM) by treatment group to visualize distribution 
-    and outliers.
-    
-    # Parameters:
-    - df (pandas.DataFrame): The input dataframe
-    - score_type (str): Score type ('TWS' or 'RPM'). Default is 'TWS'
-    - plot_type (str): 'boxplot' or 'stripplot'. Deafault is 'boxplot'
-    - data_dictionary (pandas.DataFrame): Data Dictionary * Optional for label mapping
-    
-    """
-    
-    # Validate inputs
-    if score_type not in ['TWS', 'RPM']:
-        raise ValueError("score_type must be either 'TWS' or 'RPM'")
-    if plot_type not in ['boxplot', 'stripplot']:
-        raise ValueError("plot_type must be either 'boxplot' or 'stripplot'")
-    
-    score_cols = [f'C_2_APS_{score_type}', f'C_3_APS_{score_type}', f'C_4_APS_{score_type}']
-    
-    df_clean = df.dropna(subset=score_cols, how='all')
-    
-    df_melted = df_clean.melt(id_vars=['C_1_TRT'], value_vars=score_cols,
-                              var_name='Visit', value_name='APS_Value')
-    
-    # Create label mapping if data dictionary is provided
-    if data_dictionary is not None:
-        label_mapping = dict(zip(
-            data_dictionary[data_dictionary['Variable'] == 'C_1_TRT']['Value'],
-            data_dictionary[data_dictionary['Variable'] == 'C_1_TRT']['Label']
-        ))
-        df_melted['C_1_TRT'] = df_melted['C_1_TRT'].map(label_mapping)
-    
-    df_melted['Visit'].replace({'C_2_APS_TWS':'V2','C_3_APS_TWS':'V3','C_4_APS_TWS':'V4'},inplace = True)
-    
-    plt.figure(figsize=(12, 6))
-    if plot_type == 'boxplot':
-        sns.boxplot(x='C_1_TRT', y='APS_Value', hue='Visit', data=df_melted)
-    else: 
-        sns.stripplot(x='C_1_TRT', y='APS_Value', hue='Visit', data=df_melted, jitter=True, dodge=True)
-    plt.xlabel("")
-    plt.ylabel(f"{score_type}")
-    sns.despine()
-    plt.show()
-
-# Usage
-# plot_aps_scores(df2,'RPM','boxplot',my_dict)
-
-def plot_bins(df, visit_num):
-    """
-    Creates a plot of binned APS TWS scores for a specific visit.
-
-    # Parameters:
-    - df (pandas.DataFrame): The input dataframe.
-    - visit_num (str): Visit number ('Visit 2', 'Visit 3', or 'Visit 4').
-
-    """
-    
-    visit_map = {
-        'Visit 2': 'C_2_APS_TWS',
-        'Visit 3': 'C_3_APS_TWS',
-        'Visit 4': 'C_4_APS_TWS'
-    }
-    
-    if visit_num not in visit_map:
-        raise ValueError("Invalid visit number. Choose from: 'Visit 2', 'Visit 3', 'Visit 4'.")
-
-    df_clean = df.dropna(subset=[visit_map[visit_num]], how='any')
-
-    df_melted = df_clean.melt(id_vars=['C_1_TRT'], 
-                               value_vars=[visit_map[visit_num]],
-                               var_name='APS_TWS_Type', 
-                               value_name='APS_TWS_Value')
-
-    df_melted_filtered = df_melted[df_melted['APS_TWS_Value'] != 0]
-
-    value_counts = (df_melted_filtered.groupby(['C_1_TRT', 'APS_TWS_Type', 'APS_TWS_Value'])
-                    .size().reset_index(name='Count'))
-
-    # Create bins
-    bins = [0, 100, 150, 200, 250, 300, 350, 400, 450, 500, float('inf')]
-    labels = ['0-100', '100-150', '150-200', '200-250', '250-300', '300-350', '350-400', '400-450', '450-500', '500+']
-    
-    value_counts['APS_TWS_Bin'] = pd.cut(value_counts['APS_TWS_Value'], bins=bins, labels=labels, right=False)
-
-    filtered_result = value_counts[value_counts['APS_TWS_Type'] == visit_map[visit_num]][['C_1_TRT', 'APS_TWS_Value', 'Count', 'APS_TWS_Bin']]
-
-    bin_counts = filtered_result['APS_TWS_Bin'].value_counts()
-
-    # Filter bins with counts > 0
-    non_zero_bins = bin_counts[bin_counts > 0].index
-    sorted_bins = sorted(non_zero_bins, key=lambda x: bins[labels.index(x)])
-
-    plt.figure(figsize=(12, 6))
-    sns.countplot(data=filtered_result[filtered_result['APS_TWS_Bin'].isin(non_zero_bins)], 
-                    x='APS_TWS_Bin', order=sorted_bins, palette = 'bright')
-
-    plt.title(f'Bins for APS_TWS : {visit_num}')
-    plt.xticks(rotation=45) 
-    plt.xlabel("")
-    plt.ylabel("")
-    plt.show()
-
-# Usage
-# plot_bins(df, 'Visit 4')
