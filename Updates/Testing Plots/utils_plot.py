@@ -147,8 +147,8 @@ def behaviour_plot_combined(df,behaviour,group,data_dictionary=None):
     df_plot['Visit'] = df_plot['Visit'].str.split('_').str[1]
     df_plot['Toy'].replace({'G':'Gumball','C':'Cups','P':'Popup'},inplace = True)
     plt.figure(figsize=(10, 6))
-    custom_palette = ["#FF5733", "#33FF57", "#3357FF"]  
-    sns.lineplot(data = df_plot, x = 'Visit', y = 'Score',hue = 'Toy',palette = custom_palette,marker = 'o', linewidth = 3)
+    # custom_palette = ["#FF5733", "#33FF57", "#3357FF"]  
+    sns.lineplot(data = df_plot, x = 'Visit', y = 'Score',hue = 'Toy',palette = 'bright' ,marker = 'o', linewidth = 3)
     sns.despine()
     plt.ylabel("Count")
     plt.title(f"{behaviour_title} Frequency for {group_type}")
@@ -213,8 +213,8 @@ def toy_score_comparison(df, toy_name, group, score_cognitive, score_gross_motor
 
     plt.figure(figsize=(10, 6))
 #     sns.lineplot(data=df_plot, x='Visit', y='Score', hue='Score Type', linewidth=3, marker='o')
-    custom_palette = ["#FF5733", "#33FF57", "#3357FF"]  
-    sns.lineplot(data = df_plot, x = 'Visit', y = 'Score', hue = 'Score Type', linewidth = 3, palette = custom_palette)
+    # custom_palette = ["#FF5733", "#33FF57", "#3357FF"]  
+    sns.lineplot(data = df_plot, x = 'Visit', y = 'Score', hue = 'Score Type', linewidth = 3, palette = 'bright')
     plt.title(f'Scores for {toy_name}, Group : {group_type}')
     sns.despine()
     plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0)
@@ -459,9 +459,9 @@ def create_toy_plot(df, toy_type = 'Gumball', data_dictionary = None ):
         .replace({f'C_2_APS_{toy_type}': 'V2', f'C_3_APS_{toy_type}': 'V3', f'C_4_APS_{toy_type}': 'V4'})
     )
     
-    custom_palette = ["#FF5733", "#33FF57", "#3357FF"]
+    # custom_palette = ["#FF5733", "#33FF57", "#3357FF"]
     plt.figure(figsize=(10, 6))
-    sns.lineplot(data=toy_data_plot, x='Visit', y='Score', hue='Treatment Group', marker = 'o',linewidth = 3,palette=custom_palette)
+    sns.lineplot(data=toy_data_plot, x='Visit', y='Score', hue='Treatment Group', marker = 'o',linewidth = 3,palette='bright')
     sns.despine()
     plt.title(f'{toy_type_title} Scores')
     plt.xlabel('Visit')
@@ -510,10 +510,10 @@ def create_toy_plot_grp_wise(df,grp,data_dictionary=None):
     plot_df_toy['Visit'] = 'V' + plot_df_toy['Visit']
 
     plot_df_toy['Toy Type'].replace({'Gn':'Gumball','Cn':'Cups','Pn':'Popup'},inplace = True)
-    custom_palette = ["#FF5733", "#33FF57", "#3357FF"]
+    # custom_palette = ["#FF5733", "#33FF57", "#3357FF"]
     plt.figure(figsize=(10, 6))
     plt.title(f"APSP Scores for {group_type}")
-    sns.lineplot(data = plot_df_toy , x = 'Visit', y = 'Score', hue = 'Toy Type', linewidth = 3,marker = 'o', palette = custom_palette)
+    sns.lineplot(data = plot_df_toy , x = 'Visit', y = 'Score', hue = 'Toy Type', linewidth = 3,marker = 'o', palette = 'bright')
     sns.despine()
     plt.show()
     
