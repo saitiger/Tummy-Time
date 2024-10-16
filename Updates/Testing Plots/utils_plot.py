@@ -628,3 +628,28 @@ def plot_bins(df, visit_num):
 
 # Usage
 # plot_bins(df, 'Visit 4')
+
+def plot_for_grp_behaviour_toy(df, toy_name, behaviour, data_dictionary=None):
+    toy_initial = toy_name[0].upper()
+    behaviour_mapping = {
+    'Simple Explore':'ES','Complex Explore':'EC',
+    'Look':'LK','Solution':'SL','Function':'FN'
+    }
+    behaviour_type = behaviour_mapping[behaviour]
+    
+    label_mapping = dict(zip(
+        data_dictionary[data_dictionary['Variable'] == 'C_1_TRT']['Value'],
+        data_dictionary[data_dictionary['Variable'] == 'C_1_TRT']['Label']
+    ))
+    
+    df_filt = df[[f'C_2_APS_{toy_initial}{behaviour_type}',f'C_3_APS_{toy_initial}{behaviour_type}',f'C_4_APS_{toy_initial}{behaviour_type}','C_1_TRT']]
+    df_plot = df_filt.groupby('C_1_TRT').mean().reset_index().melt(id_vars = 'C_1_TRT')
+    df_plot['Treatment Group'] = df_plot['C_1_TRT'].map(label_mapping)
+    df_plot.rename(columns = {'variable':'Visit','value':'Frequency'},inplace = True)
+    df_plot['Visit'] = 'V' + df_plot['Visit'].str.split('_').str[1]
+    plt.figure(figsize=(10, 6))
+    sns.lineplot(data = df_plot, x = 'Visit', y = 'Frequency', hue = 'Treatment Group',palette = 'bright',marker = 'o',linewidth = 3)
+    plt.title(f'{behaviour} for {toy_name}')
+    sns.despine()
+# Usage 
+# plot_for_grp_behaviour_toy(df,'Gumball','Complex Explore',my_dict)
