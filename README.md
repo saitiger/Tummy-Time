@@ -25,9 +25,11 @@
 - Added data validation script
 - Added some additional data validation checks. Performed statistical tests for difference in means.
 - Added script for new visualizations
+- Added code for some new visualizations based on the needs.
 
 **Future Work:**
 - Working on a deep learning model to correctly detect the posture of infants, thereby reducing manual work and labeling the dataset using Datavyu.
 - Deployed initial model for posture detection. Received feedback on detection.
-- Working on trying other models for detection and obtaining images for few shot learning for fine-tuning.
-- Prototyping on the new fine-tuned version; the previous model was incorrectly classifying some classes more than others.
+- Working on trying other models for detection and obtaining images for few-shot learning for fine-tuning.
+- Prototyping on the new fine-tuned version; the previous model incorrectly classifies some classes more than others.
+- Working on Q&A Chatbot for interacting with the dataset for Ad-hoc analysis
