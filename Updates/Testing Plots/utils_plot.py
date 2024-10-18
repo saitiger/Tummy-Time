@@ -653,3 +653,105 @@ def plot_for_grp_behaviour_toy(df, toy_name, behaviour, data_dictionary=None):
     sns.despine()
 # Usage 
 # plot_for_grp_behaviour_toy(df,'Gumball','Complex Explore',my_dict)
+
+def plot_toy_visit(df,toy_name,visit):
+    def create_dataset(df, toy_name, visit):
+        toy_initial = toy_name[0].upper()
+        df_plot = df.loc[((df['C_1_TRT'] == 1) | (df['C_1_TRT'] == 2)),
+                         ['C_1_TRT', f'C_{visit}_APS_{toy_initial}ES', 
+                          f'C_{visit}_APS_{toy_initial}LK',
+                          f'C_{visit}_APS_{toy_initial}FN',
+                          f'C_{visit}_APS_{toy_initial}SL',
+                          f'C_{visit}_APS_{toy_initial}EC']].dropna(how='any')
+        return df_plot
+    dd = create_dataset(df,toy_name,visit)
+    dd = dd.groupby('C_1_TRT').mean().reset_index().rename(columns = {'index':'Behavior',0:'Frequency'}).melt(id_vars = 'C_1_TRT')
+    dd['Behavior']= dd['variable'].str.split('_').str[3].str[1:]
+    dd = dd.drop('variable',axis = 1)
+    dd_filtered = dd[dd['value'] != 0]
+
+    ax = sns.barplot(data=dd_filtered, x='Behavior', y='value', hue='C_1_TRT', palette='bright')
+    sns.despine()
+
+    for p in ax.patches:
+        ax.annotate(f'{p.get_height():.1f}', 
+                (p.get_x() + p.get_width() / 2., p.get_height()), 
+                ha='center', va='bottom')
+
+    plt.show()
+    return dd
+
+def plot_behavior_metrics(df):
+    toys = ['Cups', 'Gumball', 'Popup']
+    visits = [2, 3, 4]
+    def create_dataset(df, toy_name, visit):
+        toy_initial = toy_name[0].upper()
+        df_plot = df.loc[((df['C_1_TRT'] == 1) | (df['C_1_TRT'] == 2)),
+                         ['C_1_TRT', f'C_{visit}_APS_{toy_initial}ES', 
+                          f'C_{visit}_APS_{toy_initial}LK',
+                          f'C_{visit}_APS_{toy_initial}FN',
+                          f'C_{visit}_APS_{toy_initial}SL',
+                          f'C_{visit}_APS_{toy_initial}EC']].dropna(how='any')
+        return df_plot
+
+    # Set up the subplots
+    num_toys = len(toys)
+    num_visits = len(visits)
+    
+    fig, axes = plt.subplots(num_toys, num_visits, figsize=(15, 5 * num_toys))
+    fig.subplots_adjust(hspace=0.4, wspace=0.4)  # Adjust space between plots
+
+    # Loop through all combinations of toys and visits
+    for i, toy in enumerate(toys):
+        for j, visit in enumerate(visits):
+            dd = create_dataset(df, toy, visit)
+
+            # Group by and prepare the data for plotting
+            dd = dd.groupby('C_1_TRT').mean().reset_index().melt(id_vars='C_1_TRT')
+
+            dd['Behavior'] = dd['variable'].str.split('_').str[3].str[1:]
+            dd = dd.drop('variable', axis=1)
+
+            dd_filtered = dd[dd['value'] != 0]
+
+            # Create the bar plot in the appropriate subplot
+            ax = axes[i, j]
+            sns.barplot(data=dd_filtered, x='Behavior', y='value', hue='C_1_TRT', palette='bright', ax=ax)
+            sns.despine(ax=ax)
+
+            # Annotate the bars
+            for p in ax.patches:
+                ax.annotate(f'{p.get_height():.1f}',
+                            (p.get_x() + p.get_width() / 2., p.get_height()),
+                            ha='center', va='bottom')
+
+            # Set titles and labels
+            ax.set_title(f'{toy} - Visit {visit}')
+            ax.set_xlabel('Behavior')
+            ax.set_ylabel('Value')
+            ax.legend(title='C_1_TRT')
+
+    plt.show()
+# plot_behavior_metrics(df)
+
+def lineplot_given_toy_grp(df,group,toy_name):
+    toy_initial = toy_name[0].upper()
+    df_plot = df.loc[df['C_1_TRT']==group,[f'C_2_APS_{toy_initial}ES',f'C_3_APS_{toy_initial}ES',f'C_4_APS_{toy_initial}ES',
+              f'C_2_APS_{toy_initial}LK',f'C_3_APS_{toy_initial}LK',f'C_4_APS_{toy_initial}LK',
+              f'C_2_APS_{toy_initial}FN',f'C_3_APS_{toy_initial}FN',f'C_4_APS_{toy_initial}FN',
+              f'C_2_APS_{toy_initial}SL',f'C_3_APS_{toy_initial}SL',f'C_4_APS_{toy_initial}SL',
+              f'C_2_APS_{toy_initial}EC',f'C_3_APS_{toy_initial}EC',f'C_4_APS_{toy_initial}EC']].dropna(how = 'any')
+    df_plot = df_plot.mean().reset_index().rename(columns = {'index':'variable',0:'values'})
+    df_plot['Behavior'] = df_plot['variable'].str.split('_').str[3].str[1:]
+    df_plot['Visit'] = 'V' + df_plot['variable'].str.split('_').str[1]
+    df_plot.drop(columns = 'variable',inplace = True)
+    plt.figure(figsize=(10, 6))
+    sns.lineplot(data = df_plot, x = 'Behavior', y = 'values', hue = 'Visit', marker = 'o', linewidth = 3, palette = 'bright')
+    plt.title('Line Plot of Values by Behavior and Visit')
+    plt.xlabel('Behavior')
+    plt.ylabel('Values')
+    plt.legend(title='Visit')
+    sns.despine()
+    plt.show()
+    return df_plot[['Visit','Behavior','values']].rename(columns = {'values':'Values'})
+# lineplot_given_toy_grp(df,1,'Gumball')
