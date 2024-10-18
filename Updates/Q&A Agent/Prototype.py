@@ -85,3 +85,9 @@ def groq_llm_chatbot(user_input, df):
 
     except Exception as e:
         return f"An error occurred while calling the Groq API: {str(e)}", "Error in API call or response processing."
+
+
+# Debugging 
+# 1) Picking the wrong columns 
+# df.columns[df.columns.str.contains('TIME')] # Column like this does not exist
+
