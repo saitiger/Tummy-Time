@@ -9,6 +9,8 @@ from plotly.subplots import make_subplots
 import plotly.figure_factory as ff
 import io
 from datetime import datetime, timedelta
+from pydantic import BaseModel, Field
+from typing import List, Optional
 
 csv.field_size_limit(int(1e9)) 
 
@@ -76,7 +78,6 @@ csv.field_size_limit(int(1e9))
 #     overall_class = (prone_sit_class + supine_recline_class).strip()
     
 #     return [A, B, C, D, angle_360, angle_updown, body_rotation, prone_sit_class, supine_recline_class, overall_class]
-
 
 @st.cache_data(show_spinner=False)
 def process_dataset(file):
@@ -509,3 +510,72 @@ def parse_datetime(date_val):
         return date_val
     else:
         raise ValueError(f"Unexpected data type: {type(date_val)}")
+
+class ProcessedDataFrame(BaseModel):
+    A: List[datetime]
+    B: List[float]
+    C: List[float]
+    D: List[float]
+    angle_360: List[float]
+    angle_updown: List[float]
+    Body_Rotation: List[str]
+    Prone_sit_class: List[str]
+    Supine_recline_class: List[str]
+    Overall_class: List[str]
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    @classmethod
+    def from_dataframe(cls, df: pd.DataFrame):
+        return cls(**df.to_dict(orient='list'))
+
+class DatasetDescription(BaseModel):
+    class_counts: pd.DataFrame
+    duration_str: str
+
+class ContiguousBlockStats(BaseModel):
+    max_sequence: str
+    cnt_arr: List[str]
+
+class PlotlyFigure(BaseModel):
+    figure: go.Figure
+
+    class Config:
+        arbitrary_types_allowed = True
+
+def process_dataset_with_validation(file) -> ProcessedDataFrame:
+    df = process_dataset(file)
+    return ProcessedDataFrame.from_dataframe(df)
+
+def dataset_description_with_validation(df: ProcessedDataFrame) -> DatasetDescription:
+    class_counts, duration_str = dataset_description(pd.DataFrame(df.dict()))
+    return DatasetDescription(class_counts=class_counts, duration_str=duration_str)
+
+def create_plot_with_validation(df: ProcessedDataFrame) -> PlotlyFigure:
+    fig = create_plot(pd.DataFrame(df.dict()))
+    return PlotlyFigure(figure=fig)
+
+def plot_bins_with_validation(df: ProcessedDataFrame, class_name: str) -> PlotlyFigure:
+    fig = plot_bins(pd.DataFrame(df.dict()), class_name)
+    return PlotlyFigure(figure=fig)
+
+def overall_class_stats_with_validation(df: ProcessedDataFrame, overall_class: str) -> ContiguousBlockStats:
+    max_sequence, cnt_arr = overall_class_stats(pd.DataFrame(df.dict()), overall_class)
+    return ContiguousBlockStats(max_sequence=max_sequence, cnt_arr=cnt_arr)
+
+def plot_contiguous_blocks_with_validation(contiguous_blocks: List[str], threshold: int, selected_option: str) -> PlotlyFigure:
+    fig = plot_contiguous_blocks(contiguous_blocks, threshold, selected_option)
+    return PlotlyFigure(figure=fig)
+
+def plot_contiguous_blocks_scatter_with_validation(contiguous_blocks: List[str], threshold: int, selected_option: str) -> PlotlyFigure:
+    fig = plot_contiguous_blocks_scatter(contiguous_blocks, threshold, selected_option)
+    return PlotlyFigure(figure=fig)
+
+def create_data_blocks_with_validation(df: ProcessedDataFrame, start_time: datetime, block_size: int = 50000) -> List[ProcessedDataFrame]:
+    blocks = create_data_blocks(pd.DataFrame(df.dict()), start_time, block_size)
+    return [ProcessedDataFrame.from_dataframe(block) for block in blocks]
+
+def plot_block_with_validation(block: ProcessedDataFrame) -> PlotlyFigure:
+    fig = plot_block(pd.DataFrame(block.dict()))
+    return PlotlyFigure(figure=fig)
