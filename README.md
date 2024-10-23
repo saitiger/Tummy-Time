@@ -26,6 +26,7 @@
 - Added some additional data validation checks. Performed statistical tests for difference in means.
 - Added script for new visualizations
 - Added code for some new visualizations based on the needs.
+- Conducted Repeated measures ANOVA for casual inference. 
 
 **Future Work:**
 - Working on a deep learning model to correctly detect the posture of infants, thereby reducing manual work and labeling the dataset using Datavyu.
