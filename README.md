@@ -32,7 +32,6 @@
 **Future Work:**
 - Working on a deep learning model to correctly detect the posture of infants, thereby reducing manual work and labeling the dataset using Datavyu.
 - Deployed initial model for posture detection. Received feedback on detection.
-- Working on trying other models for detection and obtaining images for few-shot learning for fine-tuning.
 - Prototyping on the new fine-tuned version; the previous model incorrectly classifies some classes more than others.
 - Working on Q&A Chatbot for interacting with the dataset for Ad-hoc analysis
 - Working on denoising data using Low Pass Filter and experimenting with threshold for non-wear time.
