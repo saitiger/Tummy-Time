@@ -26,7 +26,8 @@
 - Added some additional data validation checks. Performed statistical tests for difference in means.
 - Added script for new visualizations
 - Added code for some new visualizations based on the needs.
-- Conducted Repeated measures ANOVA for casual inference. 
+- Conducted Repeated measures ANOVA for casual inference.
+- Added code to debug non-wear time 
 
 **Future Work:**
 - Working on a deep learning model to correctly detect the posture of infants, thereby reducing manual work and labeling the dataset using Datavyu.
@@ -34,3 +35,4 @@
 - Working on trying other models for detection and obtaining images for few-shot learning for fine-tuning.
 - Prototyping on the new fine-tuned version; the previous model incorrectly classifies some classes more than others.
 - Working on Q&A Chatbot for interacting with the dataset for Ad-hoc analysis
+- Working on denoising data using Low Pass Filter and experimenting with threshold for non-wear time.
