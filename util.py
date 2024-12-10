@@ -9,8 +9,6 @@ from plotly.subplots import make_subplots
 import plotly.figure_factory as ff
 import io
 from datetime import datetime, timedelta
-from pydantic import BaseModel, Field
-from typing import List, Optional
 
 csv.field_size_limit(int(1e9)) 
 
@@ -79,6 +77,7 @@ csv.field_size_limit(int(1e9))
     
 #     return [A, B, C, D, angle_360, angle_updown, body_rotation, prone_sit_class, supine_recline_class, overall_class]
 
+
 @st.cache_data(show_spinner=False)
 def process_dataset(file):
     """
@@ -94,26 +93,26 @@ def process_dataset(file):
         df = pd.read_csv(file, encoding='utf-8', skiprows=99, on_bad_lines='skip', header=None)
     except UnicodeDecodeError:
         try:
-            # If UTF-8 fails, try 'latin-1'
             df = pd.read_csv(file, encoding='latin-1', skiprows=99, on_bad_lines='skip', header=None)
         except UnicodeDecodeError:
             return "Error: Unable to decode the file. Please ensure it's a valid CSV."
-
-    # Keep only the first 4 columns
-    df = df.iloc[:, :4]
-    df.columns = ['A', 'B', 'C', 'D']
-
-    # Add new columns with default values
+    
+    df = df.iloc[1:,:5]
+    columns = ['A','B','C','D','E']
+    df.columns = columns
+    
     df['360 angle'] = np.nan
     df['Up/down angle'] = np.nan
     df['Body Rotation'] = ""
     df['Prone-sit class'] = ""
     df['Supine-recline class'] = ""
     df['Overall class'] = ""
-
+    df['Acceleration'] = ""
+    
     S5 = 140
+    
+    df['Acceleration'] = np.sqrt(df['B']**2 + df['C']**2 + df['D']**2)
 
-    # Calculate '360 angle' and 'Up/down angle' with error handling for division by zero
     df['360 angle'] = np.where(
         (df['B']**2 + df['D']**2) != 0,
         np.sign(df['B']) * np.degrees(np.arccos(-df['D'] / np.sqrt(df['B']**2 + df['D']**2))) + 180,
@@ -126,14 +125,12 @@ def process_dataset(file):
         np.nan
     )
 
-    # Determine 'Body Rotation' status
     df['Body Rotation'] = np.where(
         (df['360 angle'] > S5) & (df['360 angle'] < (S5 + 180)),
         'supine-recline',
         'prone-sit'
     )
 
-    # Calculate 'Prone-sit class' using np.select for the entire dataframe
     prone_sit_conditions = [
         df['Up/down angle'] > 0,
         df['Up/down angle'] > -23,
@@ -147,10 +144,8 @@ def process_dataset(file):
         default='sitting'
     )
 
-    # Apply condition only to rows where Body Rotation is 'prone-sit'
     df.loc[df['Body Rotation'] != 'prone-sit', 'Prone-sit class'] = ""
 
-    # Calculate 'Supine-recline class' using np.select for the entire dataframe
     supine_recline_conditions = [
         df['Up/down angle'] > 15,
         df['Up/down angle'] < -36,
@@ -165,14 +160,9 @@ def process_dataset(file):
         default='supine'
     )
 
-    # Apply condition only to rows where Body Rotation is 'supine-recline'
     df.loc[df['Body Rotation'] != 'supine-recline', 'Supine-recline class'] = ""
-
-    # Combine 'Prone-sit class' and 'Supine-recline class' to form 'Overall class'
     df['Overall class'] = (df['Prone-sit class'] + ' ' + df['Supine-recline class']).str.strip()
-
-    # Drop rows with missing or NaN values in specific columns
-    df = df.dropna(subset=['A', 'B', 'C', 'D'])
+    df = df.dropna(subset=['A', 'B', 'C', 'D','E'])
 
     return df
 
@@ -503,6 +493,183 @@ def plot_block(block):
 
     return fig
 
+def plot_sensor_data(df):
+    """
+    Used to visualize the sensor data to identify wear, non-wear time and sensor drop.
+    """
+    df['A'] = pd.to_datetime(df['A'], format='%Y-%m-%d %H:%M:%S:%f').dt.floor('S')
+    cols = df.columns[1:].tolist()
+    df_plot = df.groupby('A')[cols].last().reset_index()
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=df_plot['A'], 
+        y=df_plot['B'],
+        mode='lines',
+        name='X-axis',  
+        hoverinfo='text',  
+        text=[f"Overall class: {row['Overall class']}<br>X-axis: {row['B']}" 
+        for _, row in df_plot.iterrows()]
+        ))
+
+    fig.add_trace(go.Scatter(
+        x=df_plot['A'], 
+        y=df_plot['Acceleration'],
+        mode='lines',
+        name='Acceleration',  
+        hoverinfo='text',  
+        text=[
+        f"Overall class: {row['Overall class']}<br>Acceleration: {row['Acceleration']}" for _, row in df_plot.iterrows()]
+        ))
+
+    fig.update_layout(
+        width=1500,
+        height=600,
+        title='X Axis and Acceleration',
+        xaxis_title='A',
+        yaxis_title='Values',
+        legend_title='Metrics',
+    )
+
+    total_seconds = df_plot.shape[0]
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    print(f" Total Video Length {hours} hours and {minutes} minutes")
+    fig.show()
+
+    return df_plot,fig
+
+def tummy_time_duration(df, min_size=60, start_time=None, end_time=None):
+    """    
+    Preparing data for visualization for tummy time at home and prone tolerance test comparision.
+    Debugging weird values, finding outliers and incorrect detection.
+    """
+    # Convert 'timestamp' or 'time' column to datetime if it is not already
+    df['A'] = pd.to_datetime(df['A'])
+
+    # If start_time and end_time are provided, filter rows across multiple days
+    if start_time and end_time:
+        start_time = pd.to_datetime(start_time, format='%H:%M').time()
+        end_time = pd.to_datetime(end_time, format='%H:%M').time()
+
+        # Create a boolean mask for rows within the time range across multiple days
+        within_time_range = (
+            (df['A'].dt.time >= start_time) & (df['A'].dt.time <= end_time)
+        )
+        if start_time > end_time:  # Handle cases where time range wraps around midnight
+            within_time_range = (df['A'].dt.time >= start_time) | (df['A'].dt.time <= end_time)
+        
+        df = df[within_time_range]
+
+    # Filter rows based on the current and previous 'Overall class' values
+    prone_or_supported = df[((df['Overall class'] == 'prone') & 
+                              ((df['Overall class'].shift() == 'prone') | (df['Overall class'].shift() == 'prone supported'))) | 
+                             ((df['Overall class'] == 'prone supported') & 
+                              ((df['Overall class'].shift() == 'prone') | (df['Overall class'].shift() == 'prone supported')))]
+
+    # Reset index to create 'row_number'
+    prone_or_supported = prone_or_supported.reset_index().rename(columns={'index': 'row_number'})
+
+    # Extract the list of row numbers (original indices)
+    ls = prone_or_supported['row_number'].to_list()
+
+    # Initialize the bucket list
+    buckets = []
+    if ls:  # Check if 'ls' is not empty
+        current_bucket = [ls[0]]
+
+        # Create buckets based on consecutive numbers
+        for i in range(1, len(ls)):
+            if ls[i] == ls[i - 1] + 1:
+                current_bucket.append(ls[i])
+            else:
+                buckets.append(current_bucket)
+                current_bucket = [ls[i]]
+
+        # Append the last bucket
+        buckets.append(current_bucket)
+
+    # Create a list of (bucket, size) pairs
+    bucket_sizes = [(bucket, len(bucket)) for bucket in buckets]
+
+    # Filter buckets that are larger than min_size
+    filtered_buckets = [(bucket, size) for bucket, size in bucket_sizes if size > min_size]
+
+    # Sort the filtered buckets by size in descending order
+    sorted_buckets = sorted(filtered_buckets, key=lambda x: x[1], reverse=True)
+
+    # Create the validate_list with the start and end indices of each bucket, along with the size difference, 'A' value, and duration
+    validate_list = []
+    duration_ls = []
+    for bucket, _ in sorted_buckets:
+        start_idx = bucket[0]
+        end_idx = bucket[-1]
+
+        # Ensure indices are within the DataFrame bounds
+        if start_idx < len(df) and end_idx < len(df):
+            duration = (df.iloc[end_idx]['A'] - df.iloc[start_idx]['A']).total_seconds()
+            minutes = int(duration // 60)
+            seconds = int(duration % 60)
+
+            timestamp_val_1 = df.iloc[end_idx]['A']
+            timestamp_val_2 = df.iloc[start_idx]['A']
+
+            validate_list.append([start_idx, end_idx, f"{minutes}m {seconds}s"])
+            duration_ls.append([f"{minutes}m {seconds}s", timestamp_val_1, timestamp_val_2])
+
+    return sorted_buckets, validate_list, duration_ls
+
+def plot_exercise_durations(prone_tolerance_value, durations):
+    """
+    Create a bar plot comparing exercise durations to a Prone Tolerance Value.
+    
+    Parameters:
+    prone_tolerance_value (str): Prone Tolerance Value in format 'Xm Ys'
+    durations (list): List of Tummy Time Durations in format 'Xm Ys'
+    """
+    def time_to_seconds(time_str):
+        minutes, seconds = map(int, time_str.replace('s', '').split('m'))
+        return minutes * 60 + seconds
+    
+    prone_tolerance_value = time_to_seconds(prone_tolerance_value)
+    duration_formatted = [duration[0] for duration in durations]
+    duration_seconds = [time_to_seconds(dur[0]) for dur in durations]
+    tummy_time_timestamps = [f"{duration[1]} to {duration[2]}" for duration in durations]
+    
+    data = pd.DataFrame({
+        'Duration (formatted)': duration_formatted,
+        'Duration (seconds)': duration_seconds,
+        'Timestamps': tummy_time_timestamps
+    })
+    
+    fig = px.bar(
+        data, 
+        x='Duration (formatted)', 
+        y='Duration (seconds)', 
+        title='Tummy Time',
+        labels={'Duration (formatted)': 'Duration', 'Duration (seconds)': 'Seconds'},
+        hover_data={'Timestamps': True,'Duration (seconds)':False,'Duration (formatted)':False} 
+    )
+    
+    fig.add_hline(
+        y=prone_tolerance_value, 
+        line_dash='dash', 
+        line_color='red', 
+        annotation_text=f"Prone Tolerance Value : {prone_tolerance_value} s",
+        annotation_position='top right'
+    )
+     
+    fig.update_traces(marker_color='skyblue', textposition='outside')
+    fig.update_layout(
+        title={'text': 'Tummy Time', 'x': 0.5, 'xanchor': 'center'},
+        yaxis_title='',
+        xaxis_title='',
+        showlegend=False
+    )
+    
+    return fig 
+
 def parse_datetime(date_val):
     if isinstance(date_val, str):
         return pd.to_datetime(date_val.rsplit(':', 1)[0], format='%Y-%m-%d %H:%M:%S')
@@ -510,72 +677,3 @@ def parse_datetime(date_val):
         return date_val
     else:
         raise ValueError(f"Unexpected data type: {type(date_val)}")
-
-class ProcessedDataFrame(BaseModel):
-    A: List[datetime]
-    B: List[float]
-    C: List[float]
-    D: List[float]
-    angle_360: List[float]
-    angle_updown: List[float]
-    Body_Rotation: List[str]
-    Prone_sit_class: List[str]
-    Supine_recline_class: List[str]
-    Overall_class: List[str]
-
-    class Config:
-        arbitrary_types_allowed = True
-
-    @classmethod
-    def from_dataframe(cls, df: pd.DataFrame):
-        return cls(**df.to_dict(orient='list'))
-
-class DatasetDescription(BaseModel):
-    class_counts: pd.DataFrame
-    duration_str: str
-
-class ContiguousBlockStats(BaseModel):
-    max_sequence: str
-    cnt_arr: List[str]
-
-class PlotlyFigure(BaseModel):
-    figure: go.Figure
-
-    class Config:
-        arbitrary_types_allowed = True
-
-def process_dataset_with_validation(file) -> ProcessedDataFrame:
-    df = process_dataset(file)
-    return ProcessedDataFrame.from_dataframe(df)
-
-def dataset_description_with_validation(df: ProcessedDataFrame) -> DatasetDescription:
-    class_counts, duration_str = dataset_description(pd.DataFrame(df.dict()))
-    return DatasetDescription(class_counts=class_counts, duration_str=duration_str)
-
-def create_plot_with_validation(df: ProcessedDataFrame) -> PlotlyFigure:
-    fig = create_plot(pd.DataFrame(df.dict()))
-    return PlotlyFigure(figure=fig)
-
-def plot_bins_with_validation(df: ProcessedDataFrame, class_name: str) -> PlotlyFigure:
-    fig = plot_bins(pd.DataFrame(df.dict()), class_name)
-    return PlotlyFigure(figure=fig)
-
-def overall_class_stats_with_validation(df: ProcessedDataFrame, overall_class: str) -> ContiguousBlockStats:
-    max_sequence, cnt_arr = overall_class_stats(pd.DataFrame(df.dict()), overall_class)
-    return ContiguousBlockStats(max_sequence=max_sequence, cnt_arr=cnt_arr)
-
-def plot_contiguous_blocks_with_validation(contiguous_blocks: List[str], threshold: int, selected_option: str) -> PlotlyFigure:
-    fig = plot_contiguous_blocks(contiguous_blocks, threshold, selected_option)
-    return PlotlyFigure(figure=fig)
-
-def plot_contiguous_blocks_scatter_with_validation(contiguous_blocks: List[str], threshold: int, selected_option: str) -> PlotlyFigure:
-    fig = plot_contiguous_blocks_scatter(contiguous_blocks, threshold, selected_option)
-    return PlotlyFigure(figure=fig)
-
-def create_data_blocks_with_validation(df: ProcessedDataFrame, start_time: datetime, block_size: int = 50000) -> List[ProcessedDataFrame]:
-    blocks = create_data_blocks(pd.DataFrame(df.dict()), start_time, block_size)
-    return [ProcessedDataFrame.from_dataframe(block) for block in blocks]
-
-def plot_block_with_validation(block: ProcessedDataFrame) -> PlotlyFigure:
-    fig = plot_block(pd.DataFrame(block.dict()))
-    return PlotlyFigure(figure=fig)
