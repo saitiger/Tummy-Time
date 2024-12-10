@@ -8,6 +8,6 @@ util.py: Contains utility functions for data processing and visualization.
 
 2_EDA.py: Provides exploratory data analysis.
 
-3_Blocks.py: Displays detailed information about time blocks for each class.
+3_Prone.py: Displays detailed about prone position data.
 
-4_Blocks_Over_Time.py : Visualizes changes in the position using Scatter Plot
+4_Sensor Data Over Time.py : Visualizes for debugging, outlier detection and faulty data.
