@@ -77,12 +77,19 @@ if uploaded is not None:
         if col2.button("View EDA"):
             st.switch_page("pages/2_EDA.py")
     with col3:
-        if col3.button("View Blocks"):
-            st.switch_page("pages/3_Blocks.py")
+        if col3.button("Prone Time Visualization"):
+            st.switch_page("pages/3_Prone.py")  
     with col4:
-        if col4.button("View Blocks Over Time Plot"):
-            st.switch_page("pages/4_Blocks_Over_Time.py")
-
+        if col4.button("Sensor Data Over Time"):
+            st.switch_page("pages/4_Sensor Data Over Time.py")                     
+    
+    ### Depreciated : Only for inital analysis done using jupyter notebook
+    # with col3:
+        # if col3.button("View Blocks"):
+            # st.switch_page("pages/3_Blocks.py")
+    # with col4:
+        # if col4.button("View Blocks Over Time Plot"):
+            # st.switch_page("pages/4_Blocks_Over_Time.py")
 
 else:
     st.warning("Please upload a CSV file to get started.")
