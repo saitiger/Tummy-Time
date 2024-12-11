@@ -9,6 +9,7 @@ from plotly.subplots import make_subplots
 import plotly.figure_factory as ff
 import io
 from datetime import datetime, timedelta
+from scipy.stats import circmean
 
 csv.field_size_limit(int(1e9)) 
 
@@ -536,9 +537,8 @@ def plot_sensor_data(df):
     hours = total_seconds // 3600
     minutes = (total_seconds % 3600) // 60
     print(f" Total Video Length {hours} hours and {minutes} minutes")
-    fig.show()
-
-    return df_plot,fig
+    
+    return df_plot, fig
 
 def tummy_time_duration(df, min_size=60, start_time=None, end_time=None):
     """    
