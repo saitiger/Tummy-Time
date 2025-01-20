@@ -510,7 +510,7 @@ def plot_sensor_data(df):
         mode='lines',
         name='X-axis',  
         hoverinfo='text',  
-        text=[f"Overall class: {row['Overall class']}<br>X-axis: {row['B']}" 
+        text=[f"Overall class: {row['Overall class']}<br>X-axis: {row['B']}<br>Time:{row['A']}" 
         for _, row in df_plot.iterrows()]
         ))
 
