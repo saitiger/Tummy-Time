@@ -80,3 +80,9 @@ df.iloc[df['C_5_APS_ES'].nlargest(10).reset_index()['index'].tolist()][['C_5_APS
 df[check].pivot(index = 'V')
 
 df_pivot[(df_pivot['V']=='V2')&(df_pivot['Behavior']=='LK')].T[:62]
+
+df.iloc[4900:5700]
+
+df.iloc[4900:5700]['Overall class'].value_counts()
+
+df.iloc[5700::100]['Overall class'].value_counts()
