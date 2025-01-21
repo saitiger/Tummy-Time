@@ -78,18 +78,6 @@ csv.field_size_limit(int(1e9))
     
 #     return [A, B, C, D, angle_360, angle_updown, body_rotation, prone_sit_class, supine_recline_class, overall_class]
 
-# Depreciated
-# def display_dataset(df):
-#     # return df.iloc[:, :-2]
-#     return df.head()
-
-def parse_datetime(date_val):
-    if isinstance(date_val, str):
-        return pd.to_datetime(date_val.rsplit(':', 1)[0], format='%Y-%m-%d %H:%M:%S')
-    elif isinstance(date_val, pd.Timestamp):
-        return date_val
-    else:
-        raise ValueError(f"Unexpected data type: {type(date_val)}")
 
 @st.cache_data(show_spinner=False)
 def process_dataset(file):
@@ -178,6 +166,10 @@ def process_dataset(file):
     df = df.dropna(subset=['A', 'B', 'C', 'D','E'])
 
     return df
+
+# def display_dataset(df):
+#     # return df.iloc[:, :-2]
+#     return df.head()
 
 def dataset_description(df):
     """
@@ -507,8 +499,8 @@ def plot_sensor_data(df):
     Used to visualize the sensor data to identify wear, non-wear time and sensor drop.
     """
     df['A'] = pd.to_datetime(df['A'], format='%Y-%m-%d %H:%M:%S:%f').dt.floor('S')
-    cols = df.columns[1:].tolist()
-    df_plot = df.groupby('A')[cols].last().reset_index()
+    # cols = df.columns[1:].tolist()
+    df_plot = df.groupby('A').agg({'Overall class':pd.Series.mode,'B':'mean','Acceleration':'mean'}).round(4).reset_index()
 
     fig = go.Figure()
 
@@ -677,3 +669,11 @@ def plot_exercise_durations(prone_tolerance_value, durations):
     )
     
     return fig 
+
+def parse_datetime(date_val):
+    if isinstance(date_val, str):
+        return pd.to_datetime(date_val.rsplit(':', 1)[0], format='%Y-%m-%d %H:%M:%S')
+    elif isinstance(date_val, pd.Timestamp):
+        return date_val
+    else:
+        raise ValueError(f"Unexpected data type: {type(date_val)}")
