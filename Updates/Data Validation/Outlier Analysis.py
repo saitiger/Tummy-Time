@@ -83,6 +83,13 @@ df_pivot[(df_pivot['V']=='V2')&(df_pivot['Behavior']=='LK')].T[:62]
 
 df.iloc[4900:5700]
 
+df_plot = df.groupby('A').agg({'Overall class':pd.Series.mode,'B':'mean','Acceleration':'mean'}).round(4).reset_index()
+
 df.iloc[4900:5700]['Overall class'].value_counts()
 
 df.iloc[5700::100]['Overall class'].value_counts()
+
+df['A'] = pd.to_datetime(df['A'], format='%Y-%m-%d %H:%M:%S:%f').dt.floor('s')
+cols = df.columns[1:].tolist()
+cols
+df_plot = df.groupby('A').agg({'Overall class':pd.Series.mode,'B':'mean','Acceleration':'mean'}).round(4).reset_index()
