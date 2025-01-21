@@ -30,7 +30,6 @@ csv.field_size_limit(int(1e9))
     
 #     return df
 
-# Depreciated 
 # def process_row(row, S5=140):
 #     try:
 #         A = row[0]
@@ -78,6 +77,16 @@ csv.field_size_limit(int(1e9))
     
 #     return [A, B, C, D, angle_360, angle_updown, body_rotation, prone_sit_class, supine_recline_class, overall_class]
 
+# def display_dataset(df):
+#     # return df.iloc[:, :-2]
+#     return df.head()
+def parse_datetime(date_val):
+    if isinstance(date_val, str):
+        return pd.to_datetime(date_val.rsplit(':', 1)[0], format='%Y-%m-%d %H:%M:%S')
+    elif isinstance(date_val, pd.Timestamp):
+        return date_val
+    else:
+        raise ValueError(f"Unexpected data type: {type(date_val)}")
 
 @st.cache_data(show_spinner=False)
 def process_dataset(file):
@@ -166,10 +175,6 @@ def process_dataset(file):
     df = df.dropna(subset=['A', 'B', 'C', 'D','E'])
 
     return df
-
-# def display_dataset(df):
-#     # return df.iloc[:, :-2]
-#     return df.head()
 
 def dataset_description(df):
     """
@@ -669,11 +674,3 @@ def plot_exercise_durations(prone_tolerance_value, durations):
     )
     
     return fig 
-
-def parse_datetime(date_val):
-    if isinstance(date_val, str):
-        return pd.to_datetime(date_val.rsplit(':', 1)[0], format='%Y-%m-%d %H:%M:%S')
-    elif isinstance(date_val, pd.Timestamp):
-        return date_val
-    else:
-        raise ValueError(f"Unexpected data type: {type(date_val)}")
