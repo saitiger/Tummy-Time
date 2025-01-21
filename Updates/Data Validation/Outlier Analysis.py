@@ -93,3 +93,31 @@ df['A'] = pd.to_datetime(df['A'], format='%Y-%m-%d %H:%M:%S:%f').dt.floor('s')
 cols = df.columns[1:].tolist()
 cols
 df_plot = df.groupby('A').agg({'Overall class':pd.Series.mode,'B':'mean','Acceleration':'mean'}).round(4).reset_index()
+
+def calculate_list_differences(df):
+    """
+    Calculate element-wise differences between Outlier_Value and Corresponding_Sub_Score lists.
+    Returns a new column with lists containing the differences.
+    
+    Args:
+        df: DataFrame containing 'Outlier_Value' and 'Corresponding_Sub_Score' columns
+        
+    Returns:
+        Series containing lists of differences
+    """
+    def diff_lists(row):
+        # Handle empty lists
+        if not row['Outlier_Value'] or not row['Corresponding_Sub_Score']:
+            return []
+            
+        # Ensure lists are of same length
+        if len(row['Outlier_Value']) != len(row['Corresponding_Sub_Score']):
+            raise ValueError(f"Lists have different lengths at index {row.name}")
+            
+        # Calculate differences
+        return [a - b for a, b in zip(row['Outlier_Value'], row['Corresponding_Sub_Score'])]
+    
+    return df.apply(diff_lists, axis=1)
+
+# Example usage
+# outliers_df['Differences'] = calculate_list_differences(outliers_df[['Outlier_Value', 'Corresponding_Sub_Score']])
