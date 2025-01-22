@@ -30,6 +30,7 @@ csv.field_size_limit(int(1e9))
     
 #     return df
 
+# Depreciated 
 # def process_row(row, S5=140):
 #     try:
 #         A = row[0]
@@ -80,6 +81,7 @@ csv.field_size_limit(int(1e9))
 # def display_dataset(df):
 #     # return df.iloc[:, :-2]
 #     return df.head()
+
 def parse_datetime(date_val):
     if isinstance(date_val, str):
         return pd.to_datetime(date_val.rsplit(':', 1)[0], format='%Y-%m-%d %H:%M:%S')
@@ -503,7 +505,7 @@ def plot_sensor_data(df):
     """
     Used to visualize the sensor data to identify wear, non-wear time and sensor drop.
     """
-    df['A'] = pd.to_datetime(df['A'], format='%Y-%m-%d %H:%M:%S:%f').dt.floor('S')
+    df['A'] = pd.to_datetime(df['A'], format='%Y-%m-%d %H:%M:%S:%f').dt.floor('s')
     # cols = df.columns[1:].tolist()
     df_plot = df.groupby('A').agg({'Overall class':pd.Series.mode,'B':'mean','Acceleration':'mean'}).round(4).reset_index()
 
@@ -674,3 +676,4 @@ def plot_exercise_durations(prone_tolerance_value, durations):
     )
     
     return fig 
+
