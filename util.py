@@ -180,35 +180,38 @@ def process_dataset(file):
 
 def dataset_description(df):
     """
-    Provides a description of the dataset including the duration of each class
+    Provides a description of the dataset including the duration of each class.
     
     Parameters:
-
     df (pandas.DataFrame): The processed dataframe.
 
     Returns:
-
     tuple: (pandas.DataFrame, str)
-
-    DataFrame containing class counts and durations.
-    String describing the total duration of the video.
+        DataFrame containing class counts and durations.
+        String describing the total duration of the video.
     """
     class_counts = df['Overall class'].fillna('NaN').groupby(df['Overall class'].fillna('Missing Rows')).count().reset_index(name='Class Count')
+    # class_counts = df['Overall class'].fillna('Missing Rows').groupby(df['Overall class'].fillna('Missing Rows')).count().reset_index(name='Class Count')
+
     class_counts['Duration in seconds'] = class_counts['Class Count'] / 100
+
     class_counts = class_counts[['Overall class', 'Duration in seconds']]
-    
+
     total_duration_seconds = class_counts['Duration in seconds'].sum()
+
+    hours = total_duration_seconds // 3600
+    minutes = (total_duration_seconds % 3600) // 60
+    seconds = (total_duration_seconds % 3600) % 60
     
-    if total_duration_seconds >= 3600:
-        total_duration_hours = total_duration_seconds / 3600
-        duration_str = f"Duration of Video: {total_duration_hours:.2f} Hours"
-    elif total_duration_seconds >= 60 and total_duration_seconds<3600 :
-        total_duration_minutes = total_duration_seconds / 60
-        duration_str = f"Duration of Video: {total_duration_minutes:.2f} Minutes"
+    if hours > 0:
+        duration_str = f"Duration of Video: {int(hours)} Hours {int(minutes)} Minutes {int(seconds)} Seconds"
+    elif minutes > 0:
+        duration_str = f"Duration of Video: {int(minutes)} Minutes {int(seconds)} Seconds"
     else:
         duration_str = f"Duration of Video: {total_duration_seconds:.2f} Seconds"
-    
+
     return class_counts, duration_str
+
 
 def create_plot(df):
     """
