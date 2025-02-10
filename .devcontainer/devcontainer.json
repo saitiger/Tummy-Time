@@ -1,31 +1,28 @@
 {
-    "image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
-    "customizations": {
-        "codespaces": {
-          "openFiles": [
-            "README.md",
-            "main.py"
-          ]
-        },
-        "vscode": {
-          "settings": {},
-          "extensions": [
-            "ms-python.python",
-            "ms-python.vscode-pylance"
-          ]
-        }
-      },
-    "forwardPorts": [
-        8501
-    ],
-    "postCreateCommand": "pip3 install --user -r requirements.txt",
-    "postAttachCommand": {
-        "server": "streamlit run main.py"
-    },
-    "portsAttributes": {
-        "8501": {
-            "label": "Application",
-            "onAutoForward": "openPreview"
-        }
+  "name": "Streamlit Dev Container",
+  "image": "mcr.microsoft.com/devcontainers/python:3.10",
+  "features": {
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.10"
     }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ]
+    }
+  },
+  "postCreateCommand": "pip install -r requirements.txt",
+  "forwardPorts": [8501],
+  "portsAttributes": {
+    "8501": {
+      "label": "Streamlit App",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postAttachCommand": {
+    "server": "streamlit run main.py"
+  }
 }
