@@ -1,5 +1,31 @@
 {
-  "image": "python:3.8",
-  "extensions": ["ms-python.python"],
-  "postCreateCommand": "pip install streamlit"
+    "image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
+    "customizations": {
+        "codespaces": {
+          "openFiles": [
+            "README.md",
+            "Chatbot.py"
+          ]
+        },
+        "vscode": {
+          "settings": {},
+          "extensions": [
+            "ms-python.python",
+            "ms-python.vscode-pylance"
+          ]
+        }
+      },
+    "forwardPorts": [
+        8501
+    ],
+    "postCreateCommand": "pip3 install --user -r requirements.txt",
+    "postAttachCommand": {
+        "server": "streamlit run main.py"
+    },
+    "portsAttributes": {
+        "8501": {
+            "label": "Application",
+            "onAutoForward": "openPreview"
+        }
+    }
 }
