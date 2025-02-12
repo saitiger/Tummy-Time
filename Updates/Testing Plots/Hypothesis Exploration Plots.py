@@ -228,3 +228,26 @@ def contigent_head_above_threshold_2(df, chunk_time=120):
     plt.xlabel('Chunk')
     sns.despine()
     plt.show()
+
+time_data = df_plot[df_plot['current height'] > 0].groupby('Toy status')['Time'].count() / 20 / 60
+time_df = pd.DataFrame(time_data).reset_index()
+time_df.columns = ['Toy status', 'Time above 0 (minutes)']
+
+plot_data = pd.merge(time_df, transitions, on='Toy status')
+
+plt.figure(figsize=(12, 6))
+
+width = 0.35
+x = np.arange(len(plot_data['Toy status']))
+
+plt.bar(x - width/2, plot_data['Time above 0 (minutes)'], width, label='Time above 0 (minutes)', color='skyblue')
+plt.bar(x + width/2, plot_data['Number of transitions'], width, label='Number of transitions', color='lightgreen')
+
+plt.xlabel('Toy Status')
+plt.title('Toy Status Analysis: Time above 0 vs Transitions')
+plt.xticks(x, plot_data['Toy status'])
+plt.legend()
+
+plt.tight_layout()
+sns.despine()
+plt.show()
