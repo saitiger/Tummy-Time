@@ -525,54 +525,62 @@ def plot_sensor_data(df):
 def tummy_time_duration(df, min_size=60, start_time=None, end_time=None):
     """    
     Preparing data for visualization for tummy time at home and prone tolerance test comparison.
-    Debugging weird values, finding outliers and incorrect detection.
+    Only processes rows with 'prone' or 'prone supported' values in Overall class.
     """
+    # Convert 'timestamp' or 'time' column to datetime if it is not already
+    df['A'] = pd.to_datetime(df['A'])
+
+    # If start_time and end_time are provided, filter rows across multiple days
     if start_time and end_time:
         start_time = pd.to_datetime(start_time, format='%H:%M').time()
         end_time = pd.to_datetime(end_time, format='%H:%M').time()
         
-        within_time_range = (df['A'].dt.time >= start_time) & (df['A'].dt.time <= end_time)
-        if start_time > end_time:
-            within_time_range = (df['A'].dt.time >= start_time) | (df['A'].dt.time <= end_time)
+        df = df[
+            (df['A'].dt.time >= start_time) & 
+            (df['A'].dt.time <= end_time)
+        ]
+
+    # Filter for only prone or prone supported positions
+    mask = df['Overall class'].isin(['prone', 'prone supported'])
+    prone_or_supported = df[mask].copy()
+    
+    # Reset index to create 'row_number'
+    prone_or_supported = prone_or_supported.reset_index()
+    
+    if prone_or_supported.empty:
+        return [], [], []
         
-        df = df[within_time_range]
+    # Find gaps in the row numbers to identify sequences
+    prone_or_supported['gap'] = prone_or_supported['index'].diff()
+    sequence_starts = prone_or_supported[prone_or_supported['gap'] > 1].index.tolist()
+    sequence_starts.insert(0, 0)  # Add the first sequence start
     
-    # Filter prone or supported positions
-    prone_or_supported = df[
-        ((df['Overall class'] == 'prone') & 
-         ((df['Overall class'].shift() == 'prone') | (df['Overall class'].shift() == 'prone supported'))) |
-        ((df['Overall class'] == 'prone supported') & 
-         ((df['Overall class'].shift() == 'prone') | (df['Overall class'].shift() == 'prone supported')))
-    ]
-    
-    prone_or_supported = prone_or_supported.reset_index().rename(columns={'index': 'row_number'})
-    ls = prone_or_supported['row_number'].to_list()
-    
+    # Create buckets
     buckets = []
-    if ls:
-        current_bucket = [ls[0]]
-        
-        for i in range(1, len(ls)):
-            if ls[i] == ls[i - 1] + 1:
-                current_bucket.append(ls[i])
-            else:
-                buckets.append(current_bucket)
-                current_bucket = [ls[i]]
-        
-        buckets.append(current_bucket)
+    for i in range(len(sequence_starts)):
+        start_idx = sequence_starts[i]
+        if i < len(sequence_starts) - 1:
+            end_idx = sequence_starts[i + 1]
+            sequence = prone_or_supported.iloc[start_idx:end_idx]
+        else:
+            sequence = prone_or_supported.iloc[start_idx:]
+            
+        if len(sequence) >= min_size:
+            bucket = sequence['index'].tolist()
+            buckets.append((bucket, len(bucket)))
     
-    bucket_sizes = [(bucket, len(bucket)) for bucket in buckets]
-    filtered_buckets = [(bucket, size) for bucket, size in bucket_sizes if size > min_size]
-    sorted_buckets = sorted(filtered_buckets, key=lambda x: x[1], reverse=True)
+    # Sort buckets by size
+    sorted_buckets = sorted(buckets, key=lambda x: x[1], reverse=True)
     
+    # Create validation and duration lists
     validate_list = []
     duration_ls = []
     
-    for bucket, _ in sorted_buckets:
-        start_idx = bucket[0]
-        end_idx = bucket[-1]
-        
-        if start_idx < len(df) and end_idx < len(df):
+    for bucket, size in sorted_buckets:
+        if size >= min_size:
+            start_idx = bucket[0]
+            end_idx = bucket[-1]
+            
             duration = (df.iloc[end_idx]['A'] - df.iloc[start_idx]['A']).total_seconds()
             minutes = int(duration // 60)
             seconds = int(duration % 60)
