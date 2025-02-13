@@ -1,1 +1,6 @@
-Streamlit webapp for Toy data visuals and processing
+Streamlit webapp for Toy data : 
+- Data Validation
+
+- Processing
+  
+- Visuals 
