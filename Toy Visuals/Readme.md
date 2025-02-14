@@ -1,6 +1,5 @@
 # Toy Visuals - Streamlit Dashboard
 
-## Overview
 Streamlit webapp for Toy data : 
 - Data Validation
 
