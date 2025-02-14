@@ -1,11 +1,11 @@
 # Toy Visuals - Streamlit Dashboard
 
-Streamlit webapp for Toy data : 
-- Data Validation
+Streamlit Dashboard for Toy data
 
-- Processing
-  
-- Visuals
+Core Functionalities : 
+1. Data Validation
+2. Processing
+3. Visuals
   
 ## File Structure
 ```
@@ -31,3 +31,15 @@ Streamlit webapp for Toy data :
    ```sh
    streamlit run Home.py
    ```
+
+## Docker Support
+
+### Build the Docker Image
+```sh
+docker build -t toy-visuals .
+```
+
+### Run the Docker Container
+```sh
+docker run -p 8501:8501 toy-visuals
+```
