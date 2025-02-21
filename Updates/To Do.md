@@ -4,6 +4,8 @@
 - Scatter plot for PTT vs At home duration
 - Display time in Hours Minutes Seconds format in the EDA section
 
+- Better Bin Visualization 
+
 - Refine Pandas Agent
 - Sensor Calibration
 - Visuals dashboard optimization
