@@ -30,7 +30,7 @@ Streamlit Webapp for :
    ```
 3. Run the Streamlit app:
    ```sh
-   streamlit run Home.py
+   streamlit run main.py
    ```
 
 ## Docker Support
