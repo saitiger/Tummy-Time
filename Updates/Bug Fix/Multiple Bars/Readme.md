@@ -1,0 +1,1 @@
+- Fix error in handling multiple bars with the same duration 
