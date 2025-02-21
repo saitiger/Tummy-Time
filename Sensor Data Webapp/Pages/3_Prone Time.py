@@ -36,5 +36,5 @@ acc_filter = st.slider(
         value=1.5)
 st.write(df[df['Acceleration'] > acc_filter])
 
-if st.button('Back to Main Page'):
-    st.switch_page("main.py")
+# if st.button('Back to Main Page'):
+    # st.switch_page("main.py")

@@ -97,8 +97,7 @@ def process_dataset(file):
     Returns : Processed DataFrame
     """
     try:
-        date_parser = lambda x: pd.to_datetime(x, format='%Y-%m-%d %H:%M:%S:%f')
-        
+        # Read the CSV file without specifying `date_parser`
         df = pd.read_csv(
             file,
             encoding='utf-8',
@@ -106,7 +105,7 @@ def process_dataset(file):
             on_bad_lines='skip',
             header=None,
             parse_dates=[0],
-            date_parser=date_parser
+            # Removed the date_parser here
         )
     except UnicodeDecodeError:
         try:
@@ -117,10 +116,13 @@ def process_dataset(file):
                 on_bad_lines='skip',
                 header=None,
                 parse_dates=[0],
-                date_parser=date_parser
+                # Removed the date_parser here as well
             )
         except UnicodeDecodeError:
             return "Error: Unable to decode the file. Please ensure it's a valid CSV."
+    
+    # Manually convert the date column using the correct format
+    df[0] = pd.to_datetime(df[0], format='%Y-%m-%d %H:%M:%S:%f')
     
     df = df.iloc[1:, :5]
     columns = ['A', 'B', 'C', 'D', 'E']
@@ -199,46 +201,67 @@ def dataset_description(df):
     class_counts = df['Overall class'].fillna('NaN').groupby(df['Overall class'].fillna('Missing Rows')).count().reset_index(name='Class Count')
     
     class_counts['Duration in seconds'] = class_counts['Class Count'] / 100
-    class_counts = class_counts[['Overall class', 'Duration in seconds']]
+    
+    def format_duration(seconds):
+        hours = int(seconds // 3600)
+        minutes = int((seconds % 3600) // 60)
+        seconds = int(seconds % 60)
+        
+        if hours > 0:
+            return f"{hours} Hours {minutes} Minutes {seconds} Seconds"
+        elif minutes > 0:
+            return f"{minutes} Minutes {seconds} Seconds"
+        else:
+            return f"{seconds} Seconds"
+    
+    class_counts['Total Duration'] = class_counts['Duration in seconds'].apply(format_duration)
     
     total_duration_seconds = class_counts['Duration in seconds'].sum()
-    hours = total_duration_seconds // 3600
-    minutes = (total_duration_seconds % 3600) // 60
-    seconds = (total_duration_seconds % 3600) % 60
+    duration_str = format_duration(total_duration_seconds)
+    duration_str = f"Duration of Video: {duration_str}"
     
-    duration_str = (
-        f"Duration of Video: {int(hours)} Hours {int(minutes)} Minutes {int(seconds)} Seconds"
-        if hours > 0
-        else f"Duration of Video: {int(minutes)} Minutes {int(seconds)} Seconds"
-        if minutes > 0
-        else f"Duration of Video: {total_duration_seconds:.2f} Seconds"
-    )
-    
-    return class_counts, duration_str
+    return class_counts[['Overall class', 'Total Duration']], duration_str
 
 def create_plot(df):
     """
-    Creates a bar plot showing the duration of each class
+    Creates a bar plot showing the duration of each class in HH:MM:SS format
     """
     class_counts = df['Overall class'].fillna('NaN').groupby(df['Overall class'].fillna('Missing Rows')).count().reset_index(name='Class Count')
-    class_counts['Duration in seconds'] = class_counts['Class Count'] / 100
     
-    fig = px.bar(class_counts, x='Overall class', y='Duration in seconds',
-                 labels={'Overall class': 'Category', 'Duration in seconds': 'Duration in Seconds'},
+    # Convert count to seconds (assuming 100 readings per second)
+    seconds = class_counts['Class Count'] / 100
+    
+    # Convert seconds to HH:MM:SS format for annotations
+    def format_duration(seconds):
+        hours = int(seconds // 3600)
+        minutes = int((seconds % 3600) // 60)
+        seconds = int(seconds % 60)
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+    
+    class_counts['Duration'] = seconds.apply(format_duration)
+    
+    fig = px.bar(class_counts, x='Overall class', y=seconds,
+                 labels={'Overall class': 'Category'},
                  title='Duration of Each Class')
     
     fig.update_layout(
         xaxis_tickangle=-45,
-        yaxis_title='Duration in Seconds',
-        xaxis=dict(showgrid=False),
-        yaxis=dict(showgrid=False)
+        yaxis=dict(
+            showticklabels=False,  # Hide y-axis tick labels
+            title=None,            # Remove y-axis title
+            showgrid=False         # Hide y-axis grid
+        ),
+        xaxis=dict(
+            showgrid=False         # Hide x-axis grid
+        )
     )
     
+    # Add duration labels on top of each bar
     for i in range(len(fig.data[0].x)):
         fig.add_annotation(
             x=fig.data[0].x[i],
             y=fig.data[0].y[i],
-            text=f"{fig.data[0].y[i]:.2f}",
+            text=class_counts['Duration'].iloc[i],
             showarrow=False,
             yshift=10
         )
@@ -522,22 +545,38 @@ def plot_sensor_data(df):
     
     return df_plot, fig
 
-def tummy_time_duration(df, min_size=60, start_time=None, end_time=None):
+def tummy_time_duration(df, min_size=60, start_datetime=None, end_datetime=None, sleep_time=None, wake_time=None):
     """    
     Preparing data for visualization for tummy time at home and prone tolerance test comparison.
     Only processes rows with 'prone' or 'prone supported' values in Overall class.
+    
+    Parameters:
+    df (DataFrame): Input DataFrame with timestamp column 'A'
+    min_size (int): Minimum duration for visualization (default: 60 seconds)
+    start_datetime (datetime): Start datetime for sensor data collection
+    end_datetime (datetime): End datetime for sensor data collection
+    sleep_time (str): Daily sleep time in 'HH:MM' format
+    wake_time (str): Daily wake time in 'HH:MM' format
     """
     # Convert 'timestamp' or 'time' column to datetime if it is not already
     df['A'] = pd.to_datetime(df['A'])
-
-    # If start_time and end_time are provided, filter rows across multiple days
-    if start_time and end_time:
-        start_time = pd.to_datetime(start_time, format='%H:%M').time()
-        end_time = pd.to_datetime(end_time, format='%H:%M').time()
-        
+    
+    # Filter by sensor on/off times if provided
+    if start_datetime and end_datetime:
         df = df[
-            (df['A'].dt.time >= start_time) & 
-            (df['A'].dt.time <= end_time)
+            (df['A'] >= pd.to_datetime(start_datetime)) & 
+            (df['A'] < pd.to_datetime(end_datetime))
+        ]
+    
+    # Filter by daily sleep/wake times if provided
+    if sleep_time and wake_time:
+        sleep_time = pd.to_datetime(sleep_time, format='%H:%M').time()
+        wake_time = pd.to_datetime(wake_time, format='%H:%M').time()
+        
+        # Keep rows where time is before sleep_time OR after wake_time
+        df = df[
+            (df['A'].dt.time <= sleep_time) | 
+            (df['A'].dt.time >= wake_time)
         ]
 
     # Filter for only prone or prone supported positions
@@ -585,8 +624,8 @@ def tummy_time_duration(df, min_size=60, start_time=None, end_time=None):
             minutes = int(duration // 60)
             seconds = int(duration % 60)
             
-            timestamp_val_1 = df.iloc[end_idx]['A']
-            timestamp_val_2 = df.iloc[start_idx]['A']
+            timestamp_val_1 = df.iloc[start_idx]['A']
+            timestamp_val_2 = df.iloc[end_idx]['A']
             
             validate_list.append([start_idx, end_idx, f"{minutes}m {seconds}s"])
             duration_ls.append([f"{minutes}m {seconds}s", timestamp_val_1, timestamp_val_2])
@@ -600,41 +639,60 @@ def plot_exercise_durations(prone_tolerance_value, durations):
     def time_to_seconds(time_str):
         minutes, seconds = map(int, time_str.replace('s', '').split('m'))
         return minutes * 60 + seconds
-    
+
+    def format_duration(seconds):
+        minutes = seconds // 60
+        sec = seconds % 60
+        return f"{minutes}m {sec}s"
+
     prone_tolerance_value = time_to_seconds(prone_tolerance_value)
-    duration_formatted = [duration[0] for duration in durations]
+
+    # Convert durations to seconds and format timestamps
     duration_seconds = [time_to_seconds(dur[0]) for dur in durations]
-    tummy_time_timestamps = [f"{duration[1]} to {duration[2]}" for duration in durations]
-    
+    formatted_durations = [format_duration(d) for d in duration_seconds]
+    tummy_time_timestamps = [f"{dur[1].strftime('%Y-%m-%d %H:%M:%S')} to {dur[2].strftime('%Y-%m-%d %H:%M:%S')}" for dur in durations]
+
+    # Use generic session labels
+    x_labels = [f"Session {i+1}" for i in range(len(durations))]
+
     data = pd.DataFrame({
-        'Duration (formatted)': duration_formatted,
+        'Session': x_labels,
         'Duration (seconds)': duration_seconds,
+        'Formatted Duration': formatted_durations,
         'Timestamps': tummy_time_timestamps
     })
     
     fig = px.bar(
         data,
-        x='Duration (formatted)',
+        x='Session',
         y='Duration (seconds)',
         title='Tummy Time',
-        labels={'Duration (formatted)': 'Duration', 'Duration (seconds)': 'Seconds'},
-        hover_data={'Timestamps': True, 'Duration (seconds)': False, 'Duration (formatted)': False}
+        labels={'Session': 'Tummy Time Sessions', 'Duration (seconds)': 'Duration (seconds)'},
+        hover_data={'Timestamps': True, 'Duration (seconds)': False}
     )
     
     fig.add_hline(
         y=prone_tolerance_value,
         line_dash='dash',
         line_color='red',
-        annotation_text=f"Prone Tolerance Value : {prone_tolerance_value} s",
+        annotation_text=f"Prone Tolerance Value: {format_duration(prone_tolerance_value)}",
         annotation_position='top right'
     )
     
-    fig.update_traces(marker_color='skyblue', textposition='outside')
+    fig.update_traces(
+        marker_color='skyblue',
+        text=formatted_durations,  # Display formatted duration above bars
+        textposition='outside',
+        width=0.6
+    )
+    
     fig.update_layout(
         title={'text': 'Tummy Time', 'x': 0.5, 'xanchor': 'center'},
-        yaxis_title='',
-        xaxis_title='',
-        showlegend=False
+        xaxis_title="Tummy Time Sessions",
+        yaxis_title="Duration (seconds)",
+        showlegend=False,
+        bargap=0.3,
+        xaxis=dict(showticklabels=False)  # Remove x-ticks
     )
     
     return fig

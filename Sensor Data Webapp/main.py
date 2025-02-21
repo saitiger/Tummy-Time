@@ -69,19 +69,19 @@ if uploaded is not None:
     )
 
     # Navigation buttons
-    col1, col2, col3,col4 = st.columns(4)
-    with col1:
-        if col1.button("View Plots"):
-            st.switch_page("pages/1_Plots.py")
-    with col2:
-        if col2.button("View EDA"):
-            st.switch_page("pages/2_EDA.py")
-    with col3:
-        if col3.button("Prone Time Visualization"):
-            st.switch_page("pages/3_Prone.py")  
-    with col4:
-        if col4.button("Sensor Data Over Time"):
-            st.switch_page("pages/4_Sensor Data Over Time.py")                     
+    # col1, col2, col3,col4 = st.columns(4)
+    # with col1:
+    #     if col1.button("View Class Counts"):
+    #         st.switch_page("pages/1_Class Counts.py")
+    # with col2:
+    #     if col2.button("View EDA"):
+    #         st.switch_page("pages/2_EDA.py")
+    # with col3:
+    #     if col3.button("Prone Time Visualization"):
+    #         st.switch_page("pages/3_Prone Time.py")  
+    # with col4:
+    #     if col4.button("Prone Tolerance"):
+    #         st.switch_page("pages/4_Prone Tolerance.py")                     
     
     ### Depreciated : Only for inital analysis done using jupyter notebook
     # with col3:

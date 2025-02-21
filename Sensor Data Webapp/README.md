@@ -1,6 +1,6 @@
 # Sensor Data Webapp
 Streamlit Webapp for :
-1. Processing raw excel file for position classification
+1. Processing raw excel file (Accelerometer data) for position classification
 2. Data Validation
 3. EDA
 4. Debugging and Anamoly Detection
@@ -10,10 +10,10 @@ Streamlit Webapp for :
 ```
 📁 Sensor Data Webapp/
 ├── 📁 pages/
-│   ├── 📄 1_Plots.py               
+│   ├── 📄 1_Class Counts.py               
 │   ├── 📄 2_EDA.py                    
-│   ├── 📄 3_Prone.py                    
-│   ├── 📄 4_Sensor Data Over Time.py  # Visualizes sensor data for debugging and anomaly detection  
+│   ├── 📄 3_Prone Time.py                    
+│   ├── 📄 4_Prone Tolerance.py    
 ├── 📄 main.py                         # Main entry point of the app  
 └── 📄 util.py                         
 ```

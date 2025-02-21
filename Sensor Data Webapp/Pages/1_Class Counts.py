@@ -29,8 +29,13 @@ else:
 
 # Overall Class Stats
 st.subheader("Overall Class Time Blocks")
-selected_class = st.selectbox("Select a class for detailed stats:", options=df["Overall class"].unique())
+selected_class = st.selectbox("Select a class for detailed stats : ", options=df["Overall class"].unique())
 max_sequence,cnt_arr = overall_class_stats(df, selected_class)
+
+# Choose Option for threshold
+options = ['Count', 'Sequence Length']
+
+selected_option = st.selectbox('Choose option for threshold : ', options)
 
 # Slider for threshold
 threshold = st.slider(
@@ -38,19 +43,23 @@ threshold = st.slider(
         min_value=5,
         max_value=50,
         value=10)
-fig_contigous_counts = plot_contiguous_blocks(cnt_arr,threshold)
-fig_contigous_counts_scatter = plot_contiguous_blocks_scatter(cnt_arr,threshold)
+
+# Create Plot based on Threshold and Option
+fig_contigous_counts = plot_contiguous_blocks(cnt_arr,threshold,selected_option)
+fig_contigous_counts_scatter = plot_contiguous_blocks_scatter(cnt_arr,threshold,selected_option)
 
 st.plotly_chart(fig_contigous_counts)
 
 st.plotly_chart(fig_contigous_counts_scatter)
 
-col1, col2 = st.columns(2)
+# col1, col2 = st.columns(2)
 
-with col1:
-    if st.button('Back to Main Page'):
-        st.switch_page("main.py")
+# Don't need this sidebar already implements this functionality
+# with col1:
+#    if st.button('Back to Main Page'):
+#        st.switch_page("main.py")
 
-with col2:
-    if st.button("View Blocks Page"):
-        st.switch_page("pages/3_Blocks.py")    
+# Depreciated Page
+# with col2:
+#    if st.button("View Blocks Page"):
+#        st.switch_page("pages/3_Blocks.py")    

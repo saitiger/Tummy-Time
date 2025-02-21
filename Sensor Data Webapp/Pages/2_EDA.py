@@ -1,7 +1,7 @@
 import streamlit as st
 from util import dataset_description, overall_class_stats
 
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide",page_icon="📊")
 
 # Check if the dataframe is in the session state
 if 'df' not in st.session_state or st.session_state.df is None:
@@ -40,5 +40,6 @@ st.write(f"Maximum Consecutive Rows {max_sequence}")
 # for segment in cnt_arr:
 #     st.write(segment)
 
-if st.button("Back to Main Page"):
-    st.switch_page("main.py")
+# Don't need this sidebar already implements this functionality
+# if st.button("Back to Main Page"):
+#    st.switch_page("main.py")
