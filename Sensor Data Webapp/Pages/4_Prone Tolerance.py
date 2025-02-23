@@ -20,8 +20,6 @@ if "visibility" not in st.session_state:
 
 # Initialize parameters with default values if not in session state
 if 'default_values_set' not in st.session_state:
-    st.session_state.start_datetime = None
-    st.session_state.end_datetime = None
     st.session_state.wake_time = "06:00"
     st.session_state.sleep_time = "20:00"
     st.session_state.min_size = 60
@@ -55,8 +53,6 @@ st.info(f"Data Collection starts from {min_datetime.strftime('%Y-%m-%d %H:%M:%S'
 col_buttons = st.columns(2)
 with col_buttons[0]:
     if st.button("Reset All Filters"):
-        st.session_state.start_datetime = None
-        st.session_state.end_datetime = None
         st.session_state.wake_time = None
         st.session_state.sleep_time = None
         st.session_state.no_filters = False
@@ -68,61 +64,12 @@ with col_buttons[1]:
         st.rerun()
 
 if not st.session_state.no_filters:
-    # Create two columns for the datetime inputs
-    col1, col2 = st.columns(2)
-
-    with col1:
-        start_date = st.date_input(
-            "Select sensor start date",
-            value=min_datetime.date() if st.session_state.start_datetime is None else st.session_state.start_datetime.date(),
-            min_value=min_datetime.date(),
-            max_value=max_datetime.date()
-        )
-        
-        # Free-form time input
-        start_time_str = st.text_input(
-            "Enter start time (HH:MM:SS)",
-            value=min_datetime.strftime("%H:%M:%S") if st.session_state.start_datetime is None else st.session_state.start_datetime.strftime("%H:%M:%S")
-        )
-        
-        try:
-            start_time = datetime.strptime(start_time_str, "%H:%M:%S").time()
-            start_datetime = datetime.combine(start_date, start_time)
-            if not validate_datetime(start_datetime, min_datetime, max_datetime):
-                start_datetime = None
-        except ValueError:
-            st.error("Please enter time in HH:MM:SS format")
-            start_datetime = None
-
-    with col2:
-        end_date = st.date_input(
-            "Select sensor end date",
-            value=max_datetime.date() if st.session_state.end_datetime is None else st.session_state.end_datetime.date(),
-            min_value=start_date if start_date else min_datetime.date(),
-            max_value=max_datetime.date()
-        )
-        
-        # Free-form time input
-        end_time_str = st.text_input(
-            "Enter end time (HH:MM:SS)",
-            value=max_datetime.strftime("%H:%M:%S") if st.session_state.end_datetime is None else st.session_state.end_datetime.strftime("%H:%M:%S")
-        )
-        
-        try:
-            end_time = datetime.strptime(end_time_str, "%H:%M:%S").time()
-            end_datetime = datetime.combine(end_date, end_time)
-            if not validate_datetime(end_datetime, min_datetime, max_datetime):
-                end_datetime = None
-        except ValueError:
-            st.error("Please enter time in HH:MM:SS format")
-            end_datetime = None
-
-    # Create two columns for the daily sleep/wake time inputs
+    # Create two columns for sleep/wake time inputs
     col3, col4 = st.columns(2)
 
     with col3:
         wake_time_str = st.text_input(
-            "Enter daily wake time (HH:MM)",
+            "Enter wake time (HH:MM)",
             value="06:00"
         )
         try:
@@ -133,7 +80,7 @@ if not st.session_state.no_filters:
 
     with col4:
         sleep_time_str = st.text_input(
-            "Enter daily sleep time (HH:MM)",
+            "Enter sleep time (HH:MM)",
             value="20:00"
         )
         try:
@@ -152,8 +99,6 @@ if not st.session_state.no_filters:
 
 else:
     # When no filters are active
-    start_datetime = None
-    end_datetime = None
     wake_time = None
     sleep_time = None
     min_size = 60
@@ -164,26 +109,36 @@ prone_tolerance_value = st.text_input(
     value="9m 30s"
 )
 
-# Input for number of rows to exclude
-exclude_rows = st.number_input(
-    "Enter how many of the first few bars to exclude:",
-    min_value=0,
-    value=0,
-    step=1
+# # Input for number of rows to exclude (Old Code for excluding bars)
+# exclude_rows = st.number_input(
+#     "Enter how many of the first few bars to exclude:",
+#     min_value=0,
+#     value=0,
+#     step=1
+# )
+
+removed_bars_input = st.text_input(
+    "Enter bar numbers to remove (comma-separated, e.g., 1,2,5):", 
+    value=""
 )
+
+# Parse the input string into a list of integers
+try:
+    removed_bars = [int(x.strip()) for x in removed_bars_input.split(',')] if removed_bars_input else []
+except ValueError:
+    st.error("Please enter valid numbers separated by commas")
+    removed_bars = []
 
 # Compute tummy time durations with all parameters
 buckets, bucket_ls, durations = tummy_time_duration(
     df_plot,
     min_size=min_size,
-    start_datetime=start_datetime,
-    end_datetime=end_datetime,
     sleep_time=sleep_time,
     wake_time=wake_time
 )
 
-# Plot with the option to exclude rows
-fig = plot_exercise_durations(prone_tolerance_value, durations[exclude_rows:])
+# Plot with the option to exclude specific bars
+fig = plot_exercise_durations(prone_tolerance_value, durations, removed_bars)
 
 # Display the Plotly figure
 st.plotly_chart(fig, use_container_width=True)
