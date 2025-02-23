@@ -1,6 +1,10 @@
 - Better Bin Visualization 
 
-- Scatter plot for PTT vs At home duration : Decouple streamlit app for processing, filtering, aggregating 
+- Scatter plot for PTT vs At home duration :
+
+Decouple streamlit app for processing, filtering, aggregating 
+
+- Preprocessing, removing anomalies 
 
 - Refine Pandas Agent
 - Sensor Calibration
