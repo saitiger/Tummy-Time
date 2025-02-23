@@ -76,16 +76,16 @@ csv.field_size_limit(int(1e9))
 #     overall_class = (prone_sit_class + supine_recline_class).strip()
 #     return [A, B, C, D, angle_360, angle_updown, body_rotation, prone_sit_class, supine_recline_class, overall_class]
 
-def parse_datetime(date_val):
-    """
-    Parse datetime values consistently across the application.
-    """
-    if isinstance(date_val, str):
-        return pd.to_datetime(date_val.rsplit(':', 1)[0], format='%Y-%m-%d %H:%M:%S')
-    elif isinstance(date_val, pd.Timestamp):
-        return date_val
-    else:
-        raise ValueError(f"Unexpected data type: {type(date_val)}")
+# def parse_datetime(date_val):
+#     """
+#     Parse datetime values consistently across the application.
+#     """
+#     if isinstance(date_val, str):
+#         return pd.to_datetime(date_val.rsplit(':', 1)[0], format='%Y-%m-%d %H:%M:%S')
+#     elif isinstance(date_val, pd.Timestamp):
+#         return date_val
+#     else:
+#         raise ValueError(f"Unexpected data type: {type(date_val)}")
 
 @st.cache_data(show_spinner=False)
 def process_dataset(file):
@@ -97,7 +97,6 @@ def process_dataset(file):
     Returns : Processed DataFrame
     """
     try:
-        # Read the CSV file without specifying `date_parser`
         df = pd.read_csv(
             file,
             encoding='utf-8',
@@ -105,7 +104,7 @@ def process_dataset(file):
             on_bad_lines='skip',
             header=None,
             parse_dates=[0],
-            # Removed the date_parser here
+            date_format='%Y-%m-%d %H:%M:%S:%f'
         )
     except UnicodeDecodeError:
         try:
@@ -116,7 +115,6 @@ def process_dataset(file):
                 on_bad_lines='skip',
                 header=None,
                 parse_dates=[0],
-                # Removed the date_parser here as well
             )
         except UnicodeDecodeError:
             return "Error: Unable to decode the file. Please ensure it's a valid CSV."
@@ -139,7 +137,6 @@ def process_dataset(file):
     
     S5 = 140
     
-    # Vectorized calculations
     df['Acceleration'] = np.sqrt(df['B']**2 + df['C']**2 + df['D']**2)
     
     denominator = np.sqrt(df['B']**2 + df['D']**2)
@@ -545,7 +542,7 @@ def plot_sensor_data(df):
     
     return df_plot, fig
 
-def tummy_time_duration(df, min_size=60, start_datetime=None, end_datetime=None, sleep_time=None, wake_time=None):
+def tummy_time_duration(df, min_size=60, sleep_time=None, wake_time=None):
     """    
     Preparing data for visualization for tummy time at home and prone tolerance test comparison.
     Only processes rows with 'prone' or 'prone supported' values in Overall class.
@@ -560,14 +557,7 @@ def tummy_time_duration(df, min_size=60, start_datetime=None, end_datetime=None,
     """
     # Convert 'timestamp' or 'time' column to datetime if it is not already
     df['A'] = pd.to_datetime(df['A'])
-    
-    # Filter by sensor on/off times if provided
-    if start_datetime and end_datetime:
-        df = df[
-            (df['A'] >= pd.to_datetime(start_datetime)) & 
-            (df['A'] < pd.to_datetime(end_datetime))
-        ]
-    
+        
     # Filter by daily sleep/wake times if provided
     if sleep_time and wake_time:
         sleep_time = pd.to_datetime(sleep_time, format='%H:%M').time()
@@ -632,35 +622,39 @@ def tummy_time_duration(df, min_size=60, start_datetime=None, end_datetime=None,
     
     return sorted_buckets, validate_list, duration_ls
 
-def plot_exercise_durations(prone_tolerance_value, durations):
+def plot_exercise_durations(prone_tolerance_value, durations, removed_bars=None):
     """
     Create a bar plot comparing exercise durations to a Prone Tolerance Value.
+    
+    Parameters:
+    prone_tolerance_value (str): Duration in format 'Xm Ys'
+    durations (list): List of durations and timestamps
+    removed_bars (list): List of bar indices to remove (1-based indexing)
     """
     def time_to_seconds(time_str):
         minutes, seconds = map(int, time_str.replace('s', '').split('m'))
         return minutes * 60 + seconds
-
     def format_duration(seconds):
         minutes = seconds // 60
         sec = seconds % 60
         return f"{minutes}m {sec}s"
-
     prone_tolerance_value = time_to_seconds(prone_tolerance_value)
-
+    
     # Convert durations to seconds and format timestamps
     duration_seconds = [time_to_seconds(dur[0]) for dur in durations]
     formatted_durations = [format_duration(d) for d in duration_seconds]
     tummy_time_timestamps = [f"{dur[1].strftime('%Y-%m-%d %H:%M:%S')} to {dur[2].strftime('%Y-%m-%d %H:%M:%S')}" for dur in durations]
-
-    # Use generic session labels
-    x_labels = [f"Session {i+1}" for i in range(len(durations))]
-
+    # Create the full dataset first
     data = pd.DataFrame({
-        'Session': x_labels,
+        'Session': [f"Session {i+1}" for i in range(len(durations))],
         'Duration (seconds)': duration_seconds,
         'Formatted Duration': formatted_durations,
-        'Timestamps': tummy_time_timestamps
+        'Timestamps': tummy_time_timestamps,
+        'Index': range(1, len(durations) + 1)  # 1-based indexing
     })
+    # Filter out removed bars if specified
+    if removed_bars:
+        data = data[~data['Index'].isin(removed_bars)]
     
     fig = px.bar(
         data,
@@ -681,7 +675,7 @@ def plot_exercise_durations(prone_tolerance_value, durations):
     
     fig.update_traces(
         marker_color='skyblue',
-        text=formatted_durations,  # Display formatted duration above bars
+        text=data['Formatted Duration'],  # Display formatted duration above bars
         textposition='outside',
         width=0.6
     )
@@ -691,8 +685,10 @@ def plot_exercise_durations(prone_tolerance_value, durations):
         xaxis_title="Tummy Time Sessions",
         yaxis_title="Duration (seconds)",
         showlegend=False,
-        bargap=0.3,
-        xaxis=dict(showticklabels=False)  # Remove x-ticks
+        bargap=0.3
     )
+    
+    # Remove all x-axis ticks and labels
+    fig.update_xaxes(showticklabels=False, showgrid=False)
     
     return fig
