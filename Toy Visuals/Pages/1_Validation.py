@@ -39,9 +39,32 @@ if uploaded is not None:
                     st.subheader("Baseline Validation Results")
                     try:
                         with st.spinner("Running baseline validation..."):
-                            fig, results = validation_baseline(df)
-                            st.plotly_chart(fig, use_container_width=True)
-                            st.write(results)
+                            fig, results, filename = validation_baseline(df)
+                            st.pyplot(fig)  # Changed to st.pyplot for matplotlib figure
+                            
+                            # Display results
+                            st.write("### Validation Results")
+                            for section, data in results.items():
+                                st.write(f"**{section}**")
+                                if isinstance(data, dict):
+                                    for key, value in data.items():
+                                        st.write(f"- {key}: {value}")
+                                else:
+                                    st.write(f"- {data}")
+                            
+                            # Add download button for the figure
+                            from io import BytesIO
+                            buffer = BytesIO()
+                            fig.savefig(buffer, format="png", dpi=300, bbox_inches='tight')
+                            buffer.seek(0)
+                            
+                            st.download_button(
+                                label="Download Baseline Validation Plot",
+                                data=buffer,
+                                file_name=filename,
+                                mime="image/png"
+                            )
+                            
                             st.success("Baseline validation completed successfully!")
                             st.info("You can now proceed to the Plots page for further analysis.")
                     except Exception as e:
@@ -52,9 +75,32 @@ if uploaded is not None:
                     st.subheader("Phase Two Validation Results")
                     try:
                         with st.spinner("Running phase two validation..."):
-                            fig, results = phase_two_validation(df)
-                            st.plotly_chart(fig, use_container_width=True)
-                            st.write(results)
+                            fig, results, filename = phase_two_validation(df)
+                            st.pyplot(fig)  # Changed to st.pyplot for matplotlib figure
+                            
+                            # Display results
+                            st.write("### Validation Results")
+                            for section, data in results.items():
+                                st.write(f"**{section}**")
+                                if isinstance(data, dict):
+                                    for key, value in data.items():
+                                        st.write(f"- {key}: {value}")
+                                else:
+                                    st.write(f"- {data}")
+                            
+                            # Add download button for the figure
+                            from io import BytesIO
+                            buffer = BytesIO()
+                            fig.savefig(buffer, format="png", dpi=300, bbox_inches='tight')
+                            buffer.seek(0)
+                            
+                            st.download_button(
+                                label="Download Phase Two Validation Plot",
+                                data=buffer,
+                                file_name=filename,
+                                mime="image/png"
+                            )
+                            
                             st.success("Phase two validation completed successfully!")
                             st.info("You can now proceed to the Plots page for further analysis.")
                     except Exception as e:

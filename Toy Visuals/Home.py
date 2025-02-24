@@ -2,11 +2,9 @@ import streamlit as st
 
 st.set_page_config(layout="wide")
 
-st.title("Data Analysis Application")
+st.title("Toy Data Analysis")
 
-st.write("""
-Toy Data Analysis
-         
+st.write("""        
 ### Getting Started:
 1. Go to the **Validation** page to upload and validate your data
 2. Then proceed to the **Plots** page to visualize the analysis
