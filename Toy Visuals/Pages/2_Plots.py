@@ -13,23 +13,21 @@ if 'df' not in st.session_state or st.session_state.df is None:
 else:
     contingent, non_contingent = st.columns(2)
     
+    chunk_time = st.slider(
+        "Select chunk time (seconds)", 
+        min_value=30, 
+        max_value=300, 
+        value=120, 
+        step=30
+    )
+    
     if contingent.button("Run Contingent Analysis", use_container_width=True):
         st.subheader("Contingent Analysis Results")
         try:
             with st.spinner("Running contingent analysis..."):
-                # Add a slider for chunk time
-                chunk_time = st.slider(
-                    "Select chunk time (seconds)", 
-                    min_value=30, 
-                    max_value=300, 
-                    value=120, 
-                    step=30
-                )
+                # Pass the chunk_time value to the function
+                fig, results, filename = contingent_head_above_threshold(st.session_state.df, chunk_time=chunk_time)
                 
-                # Run analysis
-                fig, results, filename = contingent_head_above_threshold(st.session_state.df)
-                
-                # Display results in columns
                 col1, col2 = st.columns(2)
                 
                 with col1:
@@ -37,10 +35,12 @@ else:
                     for key, value in results.get('video_stats', {}).items():
                         st.write(f"**{key}**: {value}")
                 
-                # Display plot
-                st.pyplot(fig)  # Changed to st.pyplot for matplotlib figure
-                
-                # Add download button
+                with col2:
+                    st.write("### Inversions")
+                    st.write(f"**Inversion Count**: {results.get('Inversion Count', 'N/A')}")
+
+                st.pyplot(fig) 
+
                 buffer = BytesIO()
                 fig.savefig(buffer, format="png", dpi=300, bbox_inches='tight')
                 buffer.seek(0)
@@ -63,18 +63,30 @@ else:
             with st.spinner("Running non-contingent analysis..."):
                 fig, results, filename = non_contingent_head_above_threshold(st.session_state.df)
                 
-                # Display summary statistics
-                st.write("### Analysis Summary")
-                st.write(f"- Total Rows: {results.get('total_rows', 'N/A')}")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write("### Status Change Summary")
+                    if 'Video Duration' in results:
+                        st.write(f"**Video Duration**: {results['Video Duration']}")
                 
-                if 'status_stats' in results:
-                    for key, value in results['status_stats'].items():
-                        st.write(f"- {key}: {value}")
+                    if 'status_stats' in results:
+                        for key, value in results['status_stats'].items():
+                            st.write(f"**{key}**: {value}")
                 
-                # Display plot
-                st.pyplot(fig)  # Changed to st.pyplot for matplotlib figure
+                with col2:
+                    st.write("### Head Movement Summary")
+                    if 'Head above Zero' in results:
+                        st.write("#### Head above Zero")
+                        for key, value in results['Head above Zero'].items():
+                            st.write(f"**{key}**: {value}")
+                    
+                    if 'Inversions' in results:
+                        st.write("#### Inversions")
+                        for key, value in results['Inversions'].items():
+                            st.write(f"**{key}**: {value}")
                 
-                # Add download button
+                st.pyplot(fig)  
+                
                 buffer = BytesIO()
                 fig.savefig(buffer, format="png", dpi=300, bbox_inches='tight')
                 buffer.seek(0)
