@@ -1,3 +1,4 @@
+- Sensor Validation {Aggregation only for given time periods}
 - 3T visuals fix Non Contingent breaks in graph {false face detection rows}
 - Change Toy Status Value Counts {Validation Page} : 3T Visuals
 - Better Bin Visualization 
