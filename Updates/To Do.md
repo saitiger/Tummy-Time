@@ -1,3 +1,4 @@
+- Restructure files and analysis for easier access, change permissions for certain set of users 
 - Find the cause for variability in Visit 5 {Doing Root Cause Analysis on 3 factors}
 - Sensor Validation {Aggregation only for given time periods} :
     Implemented but has errors; fixed one part working on the other 
